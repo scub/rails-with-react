@@ -1,0 +1,33 @@
+require 'spec_helper'
+ENV['RAILS_ENV'] ||= 'test'
+require File.expand_path('../config/environment', __dir__)
+require 'rspec/rails'
+
+# Short-circuit database truncation if ran in production
+abort('RAILS_ENV in production mode, aborting!') if Rails.env.production?
+require 'rspec/rails'
+
+# Run pending migrations before tests
+begin
+  ActiveRecord::Migration.maintain_test_schema!
+rescue ActiveRecord::PendingMigrationError => e
+  puts e.to_s.strip
+  exit 1
+end
+
+Dir[Rails.root.join('spec/support/**/*.rb')].each { |f| require f }
+
+RSpec.configure do |config|
+  config.include FactoryBot::Syntax::Methods
+  config.fixture_paths = Rails.root.join('/spec/fixtures')
+  config.use_transactional_fixtures = true
+  config.infer_spec_type_from_file_location!
+  config.filter_rails_from_backtrace!
+end
+
+Shoulda::Matchers.configure do |config|
+  config.integrate do |with|
+    with.test_framework :rspec
+    with.library :rails
+  end
+end

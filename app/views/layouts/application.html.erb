@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Rails/React Monolith</title>
+    <%= csrf_meta_tags %>
+    <script>
+      (function () {
+        try {
+          document.documentElement.dataset.theme = localStorage.getItem('theme') || 'terminal';
+        } catch (e) {}
+      })();
+    </script>
+    <%= vite_client_tag %>
+  </head>
+  <body>
+    <%
+      # The navbar/container shell is static, server-rendered chrome —
+    %>
+    <nav class="navbar navbar-dark bg-dark mb-4">
+      <div class="container-fluid d-flex justify-content-between align-items-center px-4">
+        <span class="navbar-brand mb-0 h1">Rails/React Monolith</span>
+        <button
+          type="button"
+          class="btn btn-outline-light btn-sm d-inline-flex align-items-center justify-content-center"
+          data-theme-toggle
+          aria-pressed="false"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+      </div>
+    </nav>
+
+    <div class="container">
+      <div id="application-root"></div>
+    </div>
+
+    <%
+      # This is the ENTIRE interface for initial data. React reads it once.
+    %>
+    <%= tag.div id: 'application-data', data: application_data.to_json %>
+
+    <%= yield %>
+    <%= vite_javascript_tag 'application.jsx' %>
+  </body>
+</html>

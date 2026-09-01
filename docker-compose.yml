@@ -1,0 +1,66 @@
+x-defaults: &defaults
+  DB_URL: postgres://rails_react_monolith:password@db:5432/rails_react_monolith_development
+  REDIS_URL: redis://redis:6379/0
+  RAILS_ENV: development
+
+services:
+  db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: rails_react_monolith
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: rails_react_monolith_development
+    volumes:
+      - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rails_react_monolith -d rails_react_monolith_development"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: .
+    command: bash -c "bin/rails db:prepare && bin/rails server -b 0.0.0.0"
+    volumes:
+      - .:/app
+      - bundle-data:/usr/local/bundle
+      - node-modules-data:/app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      <<: *defaults
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  sidekiq:
+    build: .
+    command: bash -c "bundle exec sidekiq -C config/sidekiq.yml & wait"
+    volumes:
+      - .:/app
+      - bundle-data:/usr/local/bundle
+    ports:
+      - "9292:9292"
+    environment:
+      <<: *defaults
+      OTEL_SERVICE_NAME: rails-react-monolith-sidekiq
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  db-data:
+  bundle-data:
+  node-modules-data:

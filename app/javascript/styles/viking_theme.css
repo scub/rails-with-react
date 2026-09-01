@@ -1,0 +1,74 @@
+/* Retheme Bootstrap with terminal.css's "Viking" palette
+   (https://panr.github.io/terminal-css/) — dark navy background, Fira Code,
+   cyan accent. Active only when [data-theme="viking"] is set on <html>;
+   otherwise terminal_theme.css's plain :root rules apply. Every selector
+   here is scoped under [data-theme="viking"] so it out-specifies the
+   unscoped :root/.card/.btn rules in terminal_theme.css without needing to
+   touch that file. */
+
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&display=swap');
+
+:root[data-theme='viking'] {
+  --bs-body-font-family: 'Fira Code', 'Menlo', 'Monaco', 'Lucida Console', 'Liberation Mono',
+    'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Courier New', monospace;
+  --bs-body-bg: #0e1923;
+  --bs-body-color: #d6e8ee;
+
+  --bs-primary: #5accf0;
+  --bs-primary-rgb: 90, 204, 240;
+  --bs-link-color: #5accf0;
+  --bs-link-color-rgb: 90, 204, 240;
+  --bs-link-hover-color: #73d4f2;
+  --bs-link-hover-color-rgb: 115, 212, 242;
+
+  --bs-dark: #070c12;
+  --bs-dark-rgb: 7, 12, 18;
+  --bs-secondary-color: rgba(214, 232, 238, 0.75);
+  --bs-danger: #ff6b6b;
+  --bs-danger-rgb: 255, 107, 107;
+
+  --bs-border-color: #254f60;
+  --bs-border-color-translucent: rgba(214, 232, 238, 0.175);
+  --bs-border-radius: 0;
+  --bs-border-radius-sm: 0;
+  --bs-border-radius-lg: 0;
+  --bs-border-radius-xl: 0;
+  --bs-border-radius-xxl: 0;
+  --bs-border-radius-pill: 0;
+  --bs-box-shadow-sm: none;
+}
+
+[data-theme='viking'] body {
+  background-color: var(--bs-body-bg);
+}
+
+[data-theme='viking'] code,
+[data-theme='viking'] pre,
+[data-theme='viking'] kbd,
+[data-theme='viking'] samp {
+  background-color: #172e3c;
+  color: #d6e8ee;
+}
+
+[data-theme='viking'] .card {
+  --bs-card-border-radius: 0.375rem;
+  --bs-card-inner-border-radius: calc(0.375rem - var(--bs-border-width));
+  background-color: #172e3c;
+}
+
+[data-theme='viking'] .btn {
+  --bs-btn-border-radius: 0.375rem;
+}
+
+[data-theme='viking'] .btn-primary {
+  --bs-btn-color: #0e1923;
+  --bs-btn-bg: #5accf0;
+  --bs-btn-border-color: #5accf0;
+  --bs-btn-hover-color: #0e1923;
+  --bs-btn-hover-bg: #73d4f2;
+  --bs-btn-hover-border-color: #73d4f2;
+  --bs-btn-active-color: #0e1923;
+  --bs-btn-active-bg: #4cadcc;
+  --bs-btn-active-border-color: #4cadcc;
+  --bs-btn-focus-shadow-rgb: 90, 204, 240;
+}

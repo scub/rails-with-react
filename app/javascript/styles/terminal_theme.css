@@ -1,0 +1,69 @@
+/* Retheme Bootstrap with terminal.css's "Heliotrope" palette
+   (https://panr.github.io/terminal-css/) */
+
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&display=swap');
+
+:root {
+  --bs-body-font-family: 'Fira Code', 'Menlo', 'Monaco', 'Lucida Console', 'Liberation Mono',
+    'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Courier New', monospace;
+  --bs-body-bg: #25062a;
+  --bs-body-color: #f7e9f9;
+
+  --bs-primary: #e575f8;
+  --bs-primary-rgb: 229, 117, 248;
+  --bs-link-color: #e575f8;
+  --bs-link-color-rgb: 229, 117, 248;
+  --bs-link-hover-color: #eb8ffa;
+  --bs-link-hover-color-rgb: 235, 143, 250;
+
+  --bs-dark: #170117;
+  --bs-dark-rgb: 23, 1, 23;
+  --bs-secondary-color: rgba(247, 233, 249, 0.75);
+  --bs-danger: #ff5c8a;
+  --bs-danger-rgb: 255, 92, 138;
+
+  --bs-border-color: #5c2a6b;
+  --bs-border-color-translucent: rgba(247, 233, 249, 0.175);
+  --bs-border-radius: 0;
+  --bs-border-radius-sm: 0;
+  --bs-border-radius-lg: 0;
+  --bs-border-radius-xl: 0;
+  --bs-border-radius-xxl: 0;
+  --bs-border-radius-pill: 0;
+  --bs-box-shadow-sm: none;
+}
+
+body {
+  background-color: var(--bs-body-bg);
+}
+
+code,
+pre,
+kbd,
+samp {
+  background-color: #3a0f45;
+  color: #f7e9f9;
+}
+
+.card {
+  --bs-card-border-radius: 0.375rem;
+  --bs-card-inner-border-radius: calc(0.375rem - var(--bs-border-width));
+  background-color: #3a0f45;
+}
+
+.btn {
+  --bs-btn-border-radius: 0.375rem;
+}
+
+.btn-primary {
+  --bs-btn-color: #25062a;
+  --bs-btn-bg: #e575f8;
+  --bs-btn-border-color: #e575f8;
+  --bs-btn-hover-color: #25062a;
+  --bs-btn-hover-bg: #eb8ffa;
+  --bs-btn-hover-border-color: #eb8ffa;
+  --bs-btn-active-color: #25062a;
+  --bs-btn-active-bg: #cf4dea;
+  --bs-btn-active-border-color: #cf4dea;
+  --bs-btn-focus-shadow-rgb: 229, 117, 248;
+}
