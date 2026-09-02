@@ -60,7 +60,23 @@ services:
       redis:
         condition: service_healthy
 
+  # e2e tests using playwright only run on request via:
+  #   docker compose --profile e2e run --rm e2e
+  e2e:
+    image: mcr.microsoft.com/playwright:v1.63.0-noble
+    profiles: ["e2e"]
+    working_dir: /app
+    volumes:
+      - .:/app
+      - e2e-node-modules-data:/app/node_modules
+    environment:
+      BASE_URL: http://web:3000
+    command: bash -c "npm ci && npm run test:e2e"
+    depends_on:
+      - web
+
 volumes:
   db-data:
   bundle-data:
   node-modules-data:
+  e2e-node-modules-data:
