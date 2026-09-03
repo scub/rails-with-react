@@ -75,6 +75,19 @@ services:
     depends_on:
       - web
 
+  # K6 Test suite only runs on request, same as `e2e` above:
+  #   docker compose --profile load run --rm k6 run /scripts/(breakpoint|load|smoke|soak|spike|stress)_test.js
+  k6:
+    image: grafana/k6:latest
+    profiles: ["load"]
+    volumes:
+      - ./k6:/scripts
+    environment:
+      BASE_URL: http://web:3000
+    command: run /scripts/load_test.js
+    depends_on:
+      - web
+
 volumes:
   db-data:
   bundle-data:
