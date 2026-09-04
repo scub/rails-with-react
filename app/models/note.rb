@@ -15,6 +15,8 @@ class Note < ApplicationRecord
   # the HTTP response. See frontend/app/javascript/stores/notes_store.js.
   def broadcast_created
     board.alert_remote('notes', data: NoteSerializer.new(self).as_json)
+    NotesMetrics::NOTES_CREATED.increment
+    NotesMetrics::BOARD_NOTES_COUNT.set(board.notes.count, labels: { board_id: board.id })
     NoteCreatedJob.perform_later(id)
   end
 end

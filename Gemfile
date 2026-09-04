@@ -9,6 +9,7 @@ gem 'rack-cors'
 gem 'redis'
 gem "sidekiq"
 gem "sidekiq-cron"
+gem "sidekiq-prometheus-exporter"
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 
 # Pin below 3.0: that release dropped the `quirks_mode` option ActiveSupport's
@@ -21,6 +22,8 @@ gem "pundit"
 # Vite-powered frontend (React) instead of importmap/Turbo/Stimulus [https://vite-ruby.netlify.app]
 gem "vite_rails"
 
+# Observability
+gem "prometheus-client"
 
 # Better connection pooling https://github.com/mperham/connection_pool
 # gem 'connection_pool'
