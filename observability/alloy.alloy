@@ -1,0 +1,70 @@
+faro.receiver "default" {
+  server {
+    listen_address = "0.0.0.0"
+    listen_port    = 12347
+    cors_allowed_origins = ["http://localhost:3000"]
+  }
+
+  // Ensure Faro applies the `service_name` label for Loki
+  extra_log_labels = { service_name = "rails-react-monolith-frontend" }
+
+  output {
+    logs   = [loki.write.default.receiver]
+    traces = [otelcol.exporter.otlp.tempo.input]
+  }
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
+
+otelcol.exporter.otlp "tempo" {
+  client {
+    endpoint = "tempo:4317"
+    tls {
+      insecure = true
+    }
+  }
+}
+
+// Scrape and relabel rails logs log
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "web_only" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    regex         = "web"
+    action        = "keep"
+  }
+}
+
+loki.source.docker "web" {
+  host    = "unix:///var/run/docker.sock"
+  targets = discovery.relabel.web_only.output
+  labels     = { service_name = "rails-react-monolith" }
+  forward_to = [loki.write.default.receiver]
+}
+
+// Scrape and relabel sidekiq logs
+discovery.relabel "sidekiq_only" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    regex         = "sidekiq"
+    action        = "keep"
+  }
+}
+
+loki.source.docker "sidekiq" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.sidekiq_only.output
+  labels     = { service_name = "rails-react-monolith-sidekiq" }
+  forward_to = [loki.write.default.receiver]
+}

@@ -1,6 +1,3 @@
-# Omakase Ruby styling for Rails
-inherit_gem: { rubocop-rails-omakase: rubocop.yml }
-
 plugins:
   - rubocop-factory_bot
   - rubocop-performance
@@ -17,7 +14,9 @@ RSpec/ExampleLength:
 AllCops:
   NewCops: enable
   Exclude:
+    - .gitignore
     - .pryrc
+    - docker-compose.yml
     - tmp
     - doc
     - db/**/*

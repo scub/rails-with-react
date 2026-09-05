@@ -23,6 +23,13 @@ gem "pundit"
 gem "vite_rails"
 
 # Observability
+gem "pyroscope", "~> 1.1"
+gem "pyroscope-otel"
+gem "opentelemetry-sdk"
+gem "opentelemetry-exporter-otlp"
+gem "opentelemetry-instrumentation-rails"
+gem "opentelemetry-instrumentation-pg"
+gem "opentelemetry-instrumentation-sidekiq"
 gem "prometheus-client"
 
 # Better connection pooling https://github.com/mperham/connection_pool

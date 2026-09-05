@@ -14,8 +14,8 @@ COPY Gemfile Gemfile.lock ./
 RUN bundle config set --local frozen true \
     && bundle install
 
-COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile
+COPY package.json package-lock.json ./
+RUN npm ci
 
 COPY . .
 

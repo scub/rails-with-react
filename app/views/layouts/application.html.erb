@@ -10,6 +10,12 @@
         } catch (e) {}
       })();
     </script>
+    <%
+      # Same toggle as config/initializers/observability.rb
+    %>
+    <% if ENV['OBSERVABILITY_ENABLED'] != 'false' %>
+      <%= tag.meta name: 'faro-collector-url', content: ENV.fetch('FARO_COLLECTOR_URL', 'http://localhost:12347/collect') %>
+    <% end %>
     <%= vite_client_tag %>
   </head>
   <body>

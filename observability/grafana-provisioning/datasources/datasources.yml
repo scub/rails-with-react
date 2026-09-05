@@ -1,0 +1,46 @@
+apiVersion: 1
+
+datasources:
+  - uid: prometheus
+    type: prometheus
+    name: Prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+
+  - uid: tempo
+    type: tempo
+    name: Tempo
+    access: proxy
+    url: http://tempo:3200
+    jsonData:
+      httpMethod: GET
+      # Link traces to Prometheus metrics.
+      serviceMap:
+        datasourceUid: prometheus
+      # Link spans with profiles
+      tracesToProfiles:
+        datasourceUid: pyroscope
+        profileTypeId: "process_cpu:cpu:nanoseconds:cpu:nanoseconds"
+        customQuery: false
+        tags:
+          - key: "service.name"
+            value: "service_name"
+      # Link a trace and it's spans to Faro logs/exceptions
+      tracesToLogsV2:
+        datasourceUid: loki
+        filterByTraceID: true
+        customQuery: true
+        query: '{service_name="unknown_service"} |= `${__trace.traceId}`'
+
+  - uid: pyroscope
+    type: grafana-pyroscope-datasource
+    name: Pyroscope
+    access: proxy
+    url: http://pyroscope:4040
+
+  - uid: loki
+    type: loki
+    name: Loki
+    access: proxy
+    url: http://loki:3100

@@ -1,4 +1,7 @@
 x-defaults: &defaults
+  OBSERVABILITY_ENABLED: "false"
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://tempo:4318/v1/traces
+  PYROSCOPE_SERVER_ADDRESS: http://pyroscope:4040
   DB_URL: postgres://rails_react_monolith:password@db:5432/rails_react_monolith_development
   REDIS_URL: redis://redis:6379/0
   RAILS_ENV: development
@@ -87,6 +90,78 @@ services:
     command: run /scripts/load_test.js
     depends_on:
       - web
+
+  # Observability suite only runs on request, ensure OBSERVABILITY_ENABLED set to "true" in `x-defaults` above:
+  #   docker compose --profile observability up -d
+  grafana:
+    image: grafana/grafana:latest
+    profiles: ["observability"]
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_FEATURE_TOGGLES_ENABLE: "traceToProfiles tracesEmbeddedFlameGraph"
+      GF_PLUGINS_PREINSTALL_SYNC: grafana-pyroscope-app
+    volumes:
+      - ./observability/grafana-provisioning:/etc/grafana/provisioning
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+      - tempo
+      - pyroscope
+
+  pyroscope:
+    image: grafana/pyroscope:latest
+    profiles: ["observability"]
+    ports:
+      - "4040:4040"
+
+  tempo:
+    image: grafana/tempo:latest
+    command: ["-config.file=/etc/tempo.yml"]
+    profiles: ["observability"]
+    volumes:
+      - ./observability/tempo.yml:/etc/tempo.yml
+    ports:
+      - "3200:3200" # Tempo query API
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+
+  loki:
+    image: grafana/loki:latest
+    profiles: ["observability"]
+    command: ["-config.file=/etc/loki/loki.yml"]
+    volumes:
+      - ./observability/loki.yml:/etc/loki/loki.yml
+    ports:
+      - "3100:3100"
+
+  alloy:
+    image: grafana/alloy:latest
+    profiles: ["observability"]
+    command: ["run", "--server.http.listen-addr=0.0.0.0:12345", "/etc/alloy/config.alloy"]
+    volumes:
+      - ./observability/alloy.alloy:/etc/alloy/config.alloy
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "12345:12345" # Alloy's UI/debug endpoint
+      - "12347:12347" # Faro receiver
+    depends_on:
+      - tempo
+      - loki
+
+  # Scrape custom metrics from rails/sidekiq
+  prometheus:
+    image: prom/prometheus:latest
+    profiles: ["observability"]
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - web
+      - sidekiq
 
 volumes:
   db-data:

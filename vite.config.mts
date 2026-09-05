@@ -19,9 +19,17 @@ export default defineConfig({
   },
   server: {
     host: true,
+    cors: {
+      origin: 'http://localhost:12347'
+    }
   },
   test: {
     environment: 'jsdom',
     setupFiles: [path.resolve(import.meta.dirname, 'app/javascript/test/setup.js')],
+    coverage: {
+      provider: 'v8',
+      reporters: ['text', 'json-summary'],
+      reportsDirectory: './coverage',
+    }
   },
 })
