@@ -1,18 +1,53 @@
-faro.receiver "default" {
-  server {
-    listen_address = "0.0.0.0"
-    listen_port    = 12347
-    cors_allowed_origins = ["http://localhost:3000"]
+// Native faro receiver exhibits CORS failures for `idempotency-key` header
+//   Move to otelcol.receiver.faro as faro.reciever.server.cors_allowed_headers is not yet available (v1.19.2)
+//faro.receiver "default" {
+//  server {
+//    listen_address = "0.0.0.0"
+//    listen_port    = 12347
+//    cors_allowed_origins = ["http://localhost:3000"]
+//    //cors_allowed_headers = ["content-type", "x-faro-session-id", "idempotency-key"]
+//  }
+//
+//  // Ensure Faro applies the `service_name` label for Loki
+//  extra_log_labels = { service_name = "rails-react-monolith-frontend" }
+//
+//  output {
+//    logs   = [loki.write.default.receiver]
+//    traces = [otelcol.exporter.otlp.tempo.input]
+//  }
+//}
+
+otelcol.receiver.faro "default" {
+  endpoint = "0.0.0.0:12347"
+
+  cors {
+    allowed_origins = ["http://localhost:3000"]
+    allowed_headers = ["content-type", "x-faro-session-id", "idempotency-key", "traceparent"]
+    max_age         = 3600
   }
 
-  // Ensure Faro applies the `service_name` label for Loki
-  extra_log_labels = { service_name = "rails-react-monolith-frontend" }
-
   output {
-    logs   = [loki.write.default.receiver]
+    logs   = [otelcol.processor.attributes.faro.input]
     traces = [otelcol.exporter.otlp.tempo.input]
   }
 }
+
+otelcol.processor.attributes "faro" {
+  action {
+    key    = "loki.resource.labels"
+    action = "insert"
+    value  = "service.name"
+  }
+
+  output {
+    logs = [otelcol.exporter.loki.faro.input]
+  }
+}
+
+otelcol.exporter.loki "faro" {
+  forward_to = [loki.write.default.receiver]
+}
+// End patch CORS failures from `idempotency-key` header
 
 loki.write "default" {
   endpoint {
