@@ -1,0 +1,67 @@
+#!/bin/bash
+
+SCAN_DOCKER=0
+SCAN_NODEJS=0
+SCAN_RUBY=0
+
+usage() {
+    echo "./$(basename $(pwd)) [-d|--docker] [-n|--nodejs] [-r|--ruby] [-h|--help]"
+    echo
+    echo "-d|--docker      - Run docker scans (default: disabled)"
+    echo "-n|--nodejs      - Run NodeJS scans (default: disabled)"
+    echo "-r|--ruby        - Run Ruby scans   (default: disabled)"
+    echo
+
+    exit 1
+}
+
+scan_docker() {
+    echo "Starting Docker scans, buildling image"
+    docker build --no-cache -t rails-with-react-sbom:latest .               \
+        && echo "Generating SBOM: (./rails-with-react.sbom):"               \
+        && docker scout sbom                                                \
+            --output rails-with-react.sbom rails-with-react-sbom:latest     \
+        && echo "Generating CVE report (rails-with-react-cves.md):"         \
+        && docker scout cves --only-severity critical,high --only-fixed     \
+            --format markdown --details --output rails-with-react-cves.md
+
+    test -f ./rails-with-react-cves.md && cat ./rails-with-react-cves.md
+}
+
+scan_nodejs() {
+    echo "Running npm audit"
+    npm audit
+}
+
+scan_ruby() {
+    echo "Starting ruby scans"
+    bundle install                              \
+        && echo "Bundle audit"                  \
+        && echo "============"                  \
+        && bundle audit --update 2>/dev/null    \
+        && echo "Brakeman"                      \
+        && echo "========"                      \
+        && bundle exec brakeman -A
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -d|--docker)
+            echo 'Enabling Docker scans with `docker scout`'
+            SCAN_DOCKER=1
+            ;;
+        -n|--nodejs)
+            echo 'Enabling NodeJS scans with `npm audit`'
+            SCAN_NODEJS=1
+            ;;
+        -r|--ruby)
+            echo "Enabling Ruby scans with bundle-audit and brakeman"
+            SCAN_RUBY=1
+            ;;
+    esac
+    shift
+done
+
+((SCAN_DOCKER)) && scan_docker
+((SCAN_NODEJS)) && scan_nodejs
+((SCAN_RUBY)) && scan_ruby
