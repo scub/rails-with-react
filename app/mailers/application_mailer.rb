@@ -1,4 +1,7 @@
+# frozen_string_literal: true
+
+# Default application mailer, currently unused
 class ApplicationMailer < ActionMailer::Base
-  default from: "from@example.com"
-  layout "mailer"
+  default from: 'penny@loves-to.dev'
+  layout 'mailer'
 end

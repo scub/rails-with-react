@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
-RSpec.describe NoteCreatedJob, type: :job do
+RSpec.describe NoteCreatedJob do
   it 'logs the note id it processed' do
     allow(Rails.logger).to receive(:info).and_call_original
 

@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# Serializer publishes notes in json format for React
 class NoteSerializer
   def initialize(note)
     @note = note

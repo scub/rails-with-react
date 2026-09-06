@@ -1,3 +1,6 @@
+# frozen_string_literal: true
+
+# Job to showcase deferred action using Sidekiq
 class NoteCreatedJob < ApplicationJob
   queue_as :default
 

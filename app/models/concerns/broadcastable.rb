@@ -9,9 +9,8 @@ module Broadcastable
     before_create :set_realtime_token
   end
 
-  # `channel` here is an application-level tag (e.g. "notes"), unrelated to
-  # ActionCable's own channel class. The frontend's cable_store.js reads it
-  # from message.channel to route the payload to the right domain store.
+  # `channel` is an application-level tag (e.g. "notes"), frontend's cable_store.js
+  # reads it from message.channel to route the payload to the right domain store.
   def alert_remote(channel, data: {})
     NotesMetrics::REALTIME_BROADCASTS.increment(labels: { channel: channel })
     ActionCable.server.broadcast(realtime_token, data.merge(channel: channel))

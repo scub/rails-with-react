@@ -7,7 +7,7 @@
 class RealtimeChannel < ApplicationCable::Channel
   def subscribed
     token = params[:realtime_token]
-    reject unless token.present?
+    reject if token.blank?
 
     stream_from token
   end

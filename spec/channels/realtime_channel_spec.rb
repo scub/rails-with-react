@@ -2,11 +2,16 @@
 
 require 'rails_helper'
 
-RSpec.describe RealtimeChannel, type: :channel do
-  it 'subscribes with a valid realtime_token' do
+RSpec.describe RealtimeChannel do
+  it 'subscribes when provided a valid realtime_token' do
     subscribe(realtime_token: 'test-token-123')
 
     expect(subscription).to be_confirmed
+  end
+
+  it 'subscribed with its realtime_token' do
+    subscribe(realtime_token: 'test-token-123')
+
     expect(subscription).to have_stream_from('test-token-123')
   end
 

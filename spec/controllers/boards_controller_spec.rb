@@ -1,6 +1,8 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
-RSpec.describe BoardsController, type: :controller do
+RSpec.describe BoardsController do
   describe 'GET show' do
     let!(:board) { create(:board) }
     let!(:note) { create(:note, board: board, content: 'Buy milk') }

@@ -1,8 +1,10 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
-RSpec.describe Board, type: :model do
+RSpec.describe Board do
   describe '#realtime_token' do
-    context 'on create' do
+    context 'when board created' do
       let(:board) { create(:board) }
 
       it 'assigns a token' do
@@ -25,9 +27,13 @@ RSpec.describe Board, type: :model do
     let(:board) { create(:board) }
 
     it 'broadcasts to its own realtime_token, tagged with the given channel' do
-      expect(ActionCable.server).to receive(:broadcast).with(board.realtime_token, { foo: 'bar', channel: 'notes' })
+      allow(ActionCable.server).to receive(:broadcast)
 
       board.alert_remote('notes', data: { foo: 'bar' })
+
+      expect(ActionCable.server).to have_received(:broadcast).with(
+        board.realtime_token, { foo: 'bar', channel: 'notes' }
+      )
     end
   end
 end

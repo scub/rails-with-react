@@ -35,13 +35,13 @@ module Api
       private
 
       def set_board
-        @board = Board.find(params[:board_id])
+        @board = Board.find(params.expect(:board_id))
       end
 
       # Only :content is writable from the frontend. Anything not permitted here is
       # silently dropped — see app/CLAUDE.md's note on strong params vs serializer exposure.
       def note_params
-        params.require(:note).permit(:content)
+        params.expect(note: [:content])
       end
     end
   end

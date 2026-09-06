@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+# Model for Boards, stores notes
 class Board < ApplicationRecord
   include Broadcastable
 

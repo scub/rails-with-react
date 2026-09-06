@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
 RSpec.describe BoardPolicy do
@@ -6,7 +8,7 @@ RSpec.describe BoardPolicy do
 
   describe '#show?' do
     context 'with a user' do
-      let(:user) { double('user') }
+      let(:user) { double }
 
       it 'permits the action' do
         expect(policy.show?).to be true

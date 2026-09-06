@@ -3,6 +3,7 @@ plugins:
   - rubocop-performance
   - rubocop-rails
   - rubocop-rspec
+  - rubocop-rspec_rails
 
 # https://docs.rubocop.org/rubocop-rspec/cops_rspec.html#rspecanyinstance
 RSpec/AnyInstance:
@@ -11,11 +12,21 @@ RSpec/AnyInstance:
 RSpec/ExampleLength:
   Max: 10
 
+RSpec/MultipleExpectations:
+  Exclude:
+    - spec/controllers/api/v1/notes_controller_spec.rb
+    - spec/controllers/boards_controller_spec.rb
+
+Lint/EmptyBlock:
+  Exclude:
+    - spec/factories/board_factory.rb
+
 AllCops:
   NewCops: enable
   Exclude:
     - .gitignore
     - .pryrc
+    - ruby-advisory-db/**/*
     - docker-compose.yml
     - tmp
     - doc
@@ -28,9 +39,3 @@ AllCops:
     - spec/spec_helper.rb
     - spec/rails_helper.rb
     - spec/vcr_helper.rb
-
-# Overwrite or add rules to create your own house style
-#
-# # Use `[a, [b, c]]` not `[ a, [ b, c ] ]`
-# Layout/SpaceInsideArrayLiteralBrackets:
-#   Enabled: false

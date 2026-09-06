@@ -1,8 +1,10 @@
+# frozen_string_literal: true
+
 require 'rails_helper'
 
-RSpec.describe Api::V1::NotesController, type: :controller do
+RSpec.describe Api::V1::NotesController do
   let(:board) { create(:board) }
-  let(:parsed_response) { JSON.parse(response.body) }
+  let(:parsed_response) { response.parsed_body }
 
   describe 'GET index' do
     let!(:note) { create(:note, board: board, content: 'Buy milk') }

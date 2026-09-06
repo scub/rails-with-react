@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
+# App currently has no auth so any session may view any board.
 class BoardPolicy < ApplicationPolicy
-  # Toy app has no real auth — any session may view any board.
   def show?
     true
   end
