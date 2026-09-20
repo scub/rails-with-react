@@ -1,0 +1,179 @@
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
+concurrency:
+  group: rails-with-react-testing
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+name: Lint, Test, Build, Scan 
+
+jobs:
+  rails_lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+
+      - name: Install ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          cache-version: 1
+      
+      - name: Run rubocop
+        run: |
+          bundle exec rubocop | tee -a rubocop_results.txt
+          echo "Rubocop results" >> $GITHUB_STEP_SUMMARY
+          echo "===============" >> $GITHUB_STEP_SUMMARY
+          cat rubocop_results.txt >> $GITHUB_STEP_SUMMARY
+
+  rails_test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: rails_react_monolith
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: rails_react_monolith_development
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+
+      - name: Install ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          cache-version: 1
+
+      - name: Run rspec unit tests
+        env:
+          DB_URL: postgres://rails_react_monolith:password@localhost:5432/rails_react_monolith_development
+        run: |
+          bundle exec rspec
+          echo "Rails Coverage Report" >> $GITHUB_STEP_SUMMARY 
+          echo "=====================" >> $GITHUB_STEP_SUMMARY
+          cat coverage/coverage.json | jq .metrics >> $GITHUB_STEP_SUMMARY
+      
+      - name: Archive coverage report
+        uses: actions/upload-artifact@v7
+        with:
+          name: rails-coverage.html
+          path: coverage/index.html
+          overwrite: true
+
+  frontend_test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+
+      - name: Install nodejs
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.tool-versions'
+
+      - name: Ensure packages installed
+        run: npm ci
+      
+      - name: Run vitest
+        run: |
+          npx vitest run --coverage.enabled true
+          cat coverage/coverage-summary.json | jq .total >> $GITHUB_STEP_SUMMARY
+
+      - name: Archive coverage repot
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-coverage.json
+          path: coverage/coverage-final.json
+          overwrite: true
+    
+  docker_scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build image
+        id: build-image
+        uses: docker/build-push-action@v7
+        with:
+          load: true
+          push: false
+          tags: rails-with-react:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Log into registry
+        uses: docker/login-action@v2.1.0
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PAT }}      
+
+      - name: Generate SBOM and CVE report with Docker scout
+        uses: docker/scout-action@v1
+        with:
+          command: sbom
+          format: cyclonedx
+          image: rails-with-react:latest
+          output: rails-with-react-sbom.json
+          only-severities: critical,high
+      
+      - name: Generate CVE report
+        uses: docker/scout-action@v1
+        with:
+          command: cves
+          image: rails-with-react:latest
+          only-severities: critical,high
+          output: rails-with-react-cves.json
+          only-fixed: true
+          write-comment: true
+
+      - name: Check sbom size
+        run: du -sh rails-with-react-sbom.json
+
+      # Max attestation size 16Mb
+      - name: Publish attestation
+        uses: actions/attest@v4
+        with:
+          subject-name: ${{steps.build-image.outputs.imageid}}
+          subject-digest: ${{steps.build-image.outputs.digest}}
+          sbom-path: rails-with-react-sbom.json
+          show-summary: true
+        continue-on-error: true
+
+      - name: Archive CVE Report
+        uses: actions/upload-artifact@v7
+        with:
+          name: rails-with-react-cves.json
+          path: rails-with-react-cves.json
+          overwrite: true

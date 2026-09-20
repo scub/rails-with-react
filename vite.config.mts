@@ -28,8 +28,9 @@ export default defineConfig({
     setupFiles: [path.resolve(import.meta.dirname, 'app/javascript/test/setup.js')],
     coverage: {
       provider: 'v8',
-      reporters: ['text', 'json-summary'],
-      reportsDirectory: './coverage',
+      reporter: ['json', 'json-summary', 'text'],
+      reportsDirectory: '../../coverage',
+      reportOnFailure: true,
     }
   },
 })
