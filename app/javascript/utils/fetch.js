@@ -14,6 +14,7 @@ async function fetcher(url, { method = 'GET', internal = false, data = {} } = {}
   });
 
   if (!response.ok) throw response;
+  if (response.status === 204) return null;
   return response.json();
 }
 

@@ -8,6 +8,7 @@ import 'styles/terminal_theme.css';
 import 'styles/viking_theme.css';
 
 import NotesBoard from 'components/notes_board';
+import AuthMenu from 'components/auth_menu';
 import { hydrateBoardStore } from 'stores/global/board_store';
 import { connectToCable } from 'stores/global/cable_store';
 import { seedNotesStore } from 'stores/notes_store';
@@ -33,4 +34,8 @@ root.render(
   <StrictMode>
     <NotesBoard />
   </StrictMode>
+);
+
+ReactDOM.createRoot(document.getElementById('auth-menu-root')).render(
+  <StrictMode><AuthMenu /></StrictMode>
 );

@@ -2,6 +2,7 @@
 
 # Main application controller
 class ApplicationController < ActionController::Base
+  include Authentication
   include Pundit::Authorization
 
   # Every action in every controller here calls `authorize` itself (including
@@ -11,6 +12,6 @@ class ApplicationController < ActionController::Base
 
   # Currently retuns nil as there is no auth system
   def current_user
-    nil
+    Current.user
   end
 end
