@@ -6,6 +6,7 @@ import ReactDOM from 'react-dom/client';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'styles/terminal_theme.css';
 import 'styles/viking_theme.css';
+import 'styles/layout.css';
 
 import NotesBoard from 'components/notes_board';
 import AuthMenu from 'components/auth_menu';
