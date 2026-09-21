@@ -3,7 +3,7 @@ FROM ruby:3.4-slim
 RUN apt-get update -qq \
     && apt-get install -y --no-install-recommends \
        build-essential libjemalloc-dev libpq-dev libyaml-dev curl git ca-certificates gnupg postgresql-client \
-    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && curl -fsSL https://deb.nodesource.com/setup_26.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
     && npm install -g yarn \
     && rm -rf /var/lib/apt/lists/*
