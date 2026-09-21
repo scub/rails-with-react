@@ -98,7 +98,7 @@ describe('AuthMenu', () => {
     const user = userEvent.setup();
     render(<AuthMenu />);
 
-    await user.click(screen.getByRole('button', { name: 'Menu' }))
+    await user.click(screen.getByRole('button', { name: 'Menu' }));
     await user.click(screen.getByRole('button', { name: 'Log in' }));
     await user.type(screen.getByLabelText('Email address'), 'penny@loves-to.dev');
     await user.type(screen.getByLabelText('Password', { exact: true }), 'incorrect');
@@ -115,7 +115,7 @@ describe('AuthMenu', () => {
     await user.click(screen.getByRole('button', { name: 'Menu' }));
     await user.click(screen.getByRole('button', { name: 'Log in' }));
     await user.click(screen.getByRole('button', { name: 'Need an account? Sign up' }));
-  
+
     await user.type(screen.getByLabelText('Email address'), 'penny@loves-to.dev');
     await user.type(screen.getByLabelText('Password', { exact: true }), 'password12345');
     await user.type(screen.getByLabelText('Confirm password', { exact: true }), 'password12345');

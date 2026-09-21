@@ -1,7 +1,7 @@
-import { proxy, subscribe } from 'valtio';
+import { boardStore } from 'stores/global/board_store';
 
 import { cableStore } from 'stores/global/cable_store';
-import { boardStore } from 'stores/global/board_store';
+import { proxy, subscribe } from 'valtio';
 
 // A domain store, distinct from the raw cable mailbox: it folds cable events
 // into its own shape (a note list), so components never touch the socket

@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { useSnapshot } from 'valtio';
-
 import { boardStore } from 'stores/global/board_store';
 import { notesStore } from 'stores/notes_store';
 import { fetchPost } from 'utils/fetch';
+import { useSnapshot } from 'valtio';
 
 // Data-fetching/async logic lives here, not in the component — the component
 // just renders the snapshot and calls addNote().

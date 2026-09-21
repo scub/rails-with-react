@@ -1,8 +1,8 @@
+import { useNotes } from 'hooks/use_notes';
 import { useState } from 'react';
-import { useSnapshot } from 'valtio';
 
 import { boardStore } from 'stores/global/board_store';
-import { useNotes } from 'hooks/use_notes';
+import { useSnapshot } from 'valtio';
 
 function NotesBoard() {
   const { notes, pending, addNote } = useNotes();
@@ -18,32 +18,32 @@ function NotesBoard() {
 
   return (
     <>
-      <div className="row justify-content-center mb-4">
-        <div className="col-md-8 col-lg-6">
-          <h1 className="h4 mb-3">Sticky notes</h1>
-          <div className="card shadow-sm">
-            <div className="card-body">
+      <div className='row justify-content-center mb-4'>
+        <div className='col-md-8 col-lg-6'>
+          <h1 className='h4 mb-3'>Sticky notes</h1>
+          <div className='card shadow-sm'>
+            <div className='card-body'>
               {authenticated ? (
                 <form onSubmit={handleSubmit}>
-                  <label htmlFor="note-content" className="form-label">
+                  <label htmlFor='note-content' className='form-label'>
                     New note
                   </label>
-                  <div className="input-group">
+                  <div className='input-group'>
                     <input
-                      id="note-content"
-                      type="text"
-                      className="form-control"
-                      placeholder="Write a note…"
+                      id='note-content'
+                      type='text'
+                      className='form-control'
+                      placeholder='Write a note…'
                       value={draft}
                       onChange={(event) => setDraft(event.target.value)}
                     />
-                    <button type="submit" className="btn btn-primary" disabled={pending}>
+                    <button type='submit' className='btn btn-primary' disabled={pending}>
                       Add note
                     </button>
                   </div>
                 </form>
               ) : (
-                <p className="text-muted">Log in to add notes.</p>
+                <p className='text-muted'>Log in to add notes.</p>
               )}
             </div>
           </div>
@@ -51,14 +51,14 @@ function NotesBoard() {
       </div>
 
       {notes.length === 0 ? (
-        <p className="text-center text-muted fst-italic">No notes yet — add the first one above.</p>
+        <p className='text-center text-muted fst-italic'>No notes yet — add the first one above.</p>
       ) : (
-        <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
+        <div className='row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3'>
           {notes.map((note) => (
-            <div key={note.id} className="col">
-              <div className="card h-100 shadow-sm">
-                <div className="card-body">
-                  <p className="card-text">{note.content}</p>
+            <div key={note.id} className='col'>
+              <div className='card h-100 shadow-sm'>
+                <div className='card-body'>
+                  <p className='card-text'>{note.content}</p>
                 </div>
               </div>
             </div>

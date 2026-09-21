@@ -1,2 +1,10 @@
-/* Theme agnostic component/layout styling */ 
-.icon-btn { line-height: 1; width: 2rem; height: 2rem; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+/* Theme agnostic component/layout styling */
+.icon-btn {
+  line-height: 1;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

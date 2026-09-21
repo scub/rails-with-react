@@ -6,11 +6,12 @@
    unscoped :root/.card/.btn rules in terminal_theme.css without needing to
    touch that file. */
 
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&display=swap");
 
-:root[data-theme='viking'] {
-  --bs-body-font-family: 'Fira Code', 'Menlo', 'Monaco', 'Lucida Console', 'Liberation Mono',
-    'DejaVu Sans Mono', 'Bitstream Vera Sans Mono', 'Courier New', monospace;
+:root[data-theme="viking"] {
+  --bs-body-font-family:
+    "Fira Code", "Menlo", "Monaco", "Lucida Console", "Liberation Mono", "DejaVu Sans Mono", "Bitstream Vera Sans Mono",
+    "Courier New", monospace;
   --bs-body-bg: #0e1923;
   --bs-body-color: #d6e8ee;
 
@@ -38,29 +39,29 @@
   --bs-box-shadow-sm: none;
 }
 
-[data-theme='viking'] body {
+[data-theme="viking"] body {
   background-color: var(--bs-body-bg);
 }
 
-[data-theme='viking'] code,
-[data-theme='viking'] pre,
-[data-theme='viking'] kbd,
-[data-theme='viking'] samp {
+[data-theme="viking"] code,
+[data-theme="viking"] pre,
+[data-theme="viking"] kbd,
+[data-theme="viking"] samp {
   background-color: #172e3c;
   color: #d6e8ee;
 }
 
-[data-theme='viking'] .card {
+[data-theme="viking"] .card {
   --bs-card-border-radius: 0.375rem;
   --bs-card-inner-border-radius: calc(0.375rem - var(--bs-border-width));
   background-color: #172e3c;
 }
 
-[data-theme='viking'] .btn {
+[data-theme="viking"] .btn {
   --bs-btn-border-radius: 0.375rem;
 }
 
-[data-theme='viking'] .btn-primary {
+[data-theme="viking"] .btn-primary {
   --bs-btn-color: #0e1923;
   --bs-btn-bg: #5accf0;
   --bs-btn-border-color: #5accf0;
@@ -73,7 +74,7 @@
   --bs-btn-focus-shadow-rgb: 90, 204, 240;
 }
 
-[data-theme='viking'] .dropdown-menu {
+[data-theme="viking"] .dropdown-menu {
   --bs-dropdown-bg: #172e3c;
   --bs-dropdown-link-color: #f7e9f9;
   --bs-dropdown-link-hover-bg: #254f60;

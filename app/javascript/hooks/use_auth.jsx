@@ -15,11 +15,11 @@ function useAuth() {
           email_address: emailAddress,
           password,
           ...(mode === 'signup' ? { password_confirmation: passwordConfirmation } : {}),
-        }
+        },
       });
       window.location.reload();
     } catch (response) {
-      const body = await response.json()
+      const body = await response.json();
       throw new Error(body.error || (body.errors || []).join(', '));
     } finally {
       setPending(false);

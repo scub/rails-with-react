@@ -1,6 +1,6 @@
 import { proxy } from 'valtio';
 
-// Populated exactly once, at boot, from the #application-data blob. 
+// Populated exactly once, at boot, from the #application-data blob.
 // Nothing here is ever re-fetched from Rails.
 const boardStore = proxy({
   boardId: null,
