@@ -3,6 +3,14 @@
 # Policy class for Note model
 class NotePolicy < ApplicationPolicy
   def create?
-    record.content.present?
+    user.present? && record.content.present?
+  end
+
+  def update? # not wired in yet
+    record.user == user
+  end
+
+  def destroy?
+    record.user == user
   end
 end

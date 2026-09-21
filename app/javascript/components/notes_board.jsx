@@ -1,9 +1,12 @@
 import { useState } from 'react';
+import { useSnapshot } from 'valtio';
 
+import { boardStore } from 'stores/global/board_store';
 import { useNotes } from 'hooks/use_notes';
 
 function NotesBoard() {
   const { notes, pending, addNote } = useNotes();
+  const { authenticated } = useSnapshot(boardStore);
   const [draft, setDraft] = useState('');
 
   function handleSubmit(event) {
@@ -20,24 +23,28 @@ function NotesBoard() {
           <h1 className="h4 mb-3">Sticky notes</h1>
           <div className="card shadow-sm">
             <div className="card-body">
-              <form onSubmit={handleSubmit}>
-                <label htmlFor="note-content" className="form-label">
-                  New note
-                </label>
-                <div className="input-group">
-                  <input
-                    id="note-content"
-                    type="text"
-                    className="form-control"
-                    placeholder="Write a note…"
-                    value={draft}
-                    onChange={(event) => setDraft(event.target.value)}
-                  />
-                  <button type="submit" className="btn btn-primary" disabled={pending}>
-                    Add note
-                  </button>
-                </div>
-              </form>
+              {authenticated ? (
+                <form onSubmit={handleSubmit}>
+                  <label htmlFor="note-content" className="form-label">
+                    New note
+                  </label>
+                  <div className="input-group">
+                    <input
+                      id="note-content"
+                      type="text"
+                      className="form-control"
+                      placeholder="Write a note…"
+                      value={draft}
+                      onChange={(event) => setDraft(event.target.value)}
+                    />
+                    <button type="submit" className="btn btn-primary" disabled={pending}>
+                      Add note
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <p className="text-muted">Log in to add notes.</p>
+              )}
             </div>
           </div>
         </div>

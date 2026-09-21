@@ -1,6 +1,9 @@
 require 'sidekiq/web'
 
 Rails.application.routes.draw do
+  resource :session
+  resources :registrations, only: :create
+  resources :passwords, only: %i[create update], param: :token
   # No auth — same local-only caveat as Grafana's anonymous admin login (see
   # the README's Observability section).
   mount Sidekiq::Web => '/sidekiq'

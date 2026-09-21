@@ -5,6 +5,7 @@ module Api
     # Reached from the frontend via `fetcher()` (frontend/app/javascript/utils/fetch.js)
     # with `internal: true`, which attaches the CSRF token read from `csrf_meta_tags`.
     class NotesController < ApplicationController
+      allow_unauthenticated_access only: :index
       before_action :set_board
 
       def index
@@ -14,7 +15,8 @@ module Api
       end
 
       def create
-        note = @board.notes.new(note_params)
+        note = @board.notes.new(note_params.merge(user: current_user)) 
+
         authorize note
 
         if note.save

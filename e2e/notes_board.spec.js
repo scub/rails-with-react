@@ -33,8 +33,8 @@ test('does not submit a blank note', async ({ page }) => {
 });
 
 test('a note added in one tab appears in another over ActionCable', async ({ browser }) => {
-  const contextA = await browser.newContext();
-  const contextB = await browser.newContext();
+  const contextA = await browser.newContext({ storageState: 'e2e/.auth/user.json' });
+  const contextB = await browser.newContext({ storageState: 'e2e/.auth/user.json' });
   const pageA = await contextA.newPage();
   const pageB = await contextB.newPage();
 
@@ -52,4 +52,16 @@ test('a note added in one tab appears in another over ActionCable', async ({ bro
     await contextA.close();
     await contextB.close();
   }
+});
+
+test('logged-out user sees board but no create form', async ({ browser }) => {
+  const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+  const page = await context.newPage();
+
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Sticky notes' })).toBeVisible();
+  await expect(page.getByLabel('New note')).not.toBeVisible();
+  await expect(page.getByText('Log in to add notes.')).toBeVisible();
+
+  await context.close();
 });
