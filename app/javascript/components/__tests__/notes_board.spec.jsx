@@ -8,6 +8,7 @@ const { mockUseNotes } = vi.hoisted(() => ({ mockUseNotes: vi.fn() }));
 // the component doesn't need to know how useNotes gets its data.
 vi.mock('hooks/use_notes', () => ({ useNotes: mockUseNotes }));
 
+import { boardStore } from 'stores/global/board_store';
 import NotesBoard from '../notes_board';
 
 describe('NotesBoard', () => {
@@ -15,6 +16,7 @@ describe('NotesBoard', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    boardStore.authenticated = true;
     mockUseNotes.mockReturnValue({
       notes: [
         { id: 1, content: 'Buy milk' },
@@ -59,5 +61,14 @@ describe('NotesBoard', () => {
     render(<NotesBoard />);
 
     expect(screen.getByRole('button', { name: 'Add note' })).toBeDisabled();
+  });
+
+  it('shows a login prompt instead of the form when logged out', () => {
+    boardStore.authenticated = false;
+
+    render(<NotesBoard />);
+
+    expect(screen.queryByLabelText('New note')).not.toBeInTheDocument();
+    expect(screen.getByText('Log in to add notes.')).toBeInTheDocument();
   });
 });

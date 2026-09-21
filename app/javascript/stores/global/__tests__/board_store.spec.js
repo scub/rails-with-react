@@ -6,7 +6,7 @@ describe('boardStore', () => {
   beforeEach(() => {
     boardStore.boardId = null;
     boardStore.realtimeToken = null;
-    boardStore.currentUserName = null;
+    boardStore.authenticated = false;
     boardStore.securityToken = null;
   });
 
@@ -15,14 +15,14 @@ describe('boardStore', () => {
       hydrateBoardStore({
         board_id: 42,
         realtime_token: 'rt-abc',
-        current_user_name: 'Learner-7',
+        authenticated: true,
         security_token: 'sec-123',
       });
 
       expect(boardStore).toMatchObject({
         boardId: 42,
         realtimeToken: 'rt-abc',
-        currentUserName: 'Learner-7',
+        authenticated: true,
         securityToken: 'sec-123',
       });
     });
