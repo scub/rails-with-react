@@ -15,21 +15,13 @@ module Api
       end
 
       def create
-        note = @board.notes.new(note_params.merge(user: current_user)) 
+        note = @board.notes.new(note_params.merge(user: current_user))
 
         authorize note
 
-        if note.save
-          # Broadcasting happens on the model (see Note#broadcast_created), not here —
-          # keeps the controller thin and the realtime side effect co-located with the write.
-          render json: NoteSerializer.new(note).as_json, status: :created
-        else
-          render json: { errors: note.errors.full_messages }, status: :unprocessable_content
-        end
+        save_note(note)
       rescue Pundit::NotAuthorizedError
         # NotePolicy#create? denies exactly the notes that would also fail
-        # model validation (blank content) — surface that the same way, as a
-        # validation error, rather than a generic 403.
         note.valid?
         render json: { errors: note.errors.full_messages }, status: :unprocessable_content
       end
@@ -40,8 +32,16 @@ module Api
         @board = Board.find(params.expect(:board_id))
       end
 
-      # Only :content is writable from the frontend. Anything not permitted here is
-      # silently dropped — see app/CLAUDE.md's note on strong params vs serializer exposure.
+      def save_note(note)
+        if note.save
+          # Broadcasting happens on the model (see Note#broadcast_created)
+          render json: NoteSerializer.new(note).as_json, status: :created
+        else
+          render json: { errors: note.errors.full_messages }, status: :unprocessable_content
+        end
+      end
+
+      # Only :content is writable from the frontend. Anything not permitted here is dropped
       def note_params
         params.expect(note: [:content])
       end

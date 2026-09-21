@@ -6,7 +6,8 @@ class NotePolicy < ApplicationPolicy
     user.present? && record.content.present?
   end
 
-  def update? # not wired in yet
+  # not wired in yet
+  def update?
     record.user == user
   end
 

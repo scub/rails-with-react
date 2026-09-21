@@ -3,6 +3,7 @@
 FactoryBot.define do
   factory :note do
     board
+    user
     content { 'Remember to water the plants' }
   end
 end

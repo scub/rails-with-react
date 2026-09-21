@@ -1,3 +1,6 @@
+# frozen_string_literal: true
+
+# Authentication controller concern from rails generate authentication
 module Authentication
   extend ActiveSupport::Concern
 
@@ -8,44 +11,45 @@ module Authentication
   end
 
   class_methods do
-    def allow_unauthenticated_access(**options)
-      skip_before_action :require_authentication, **options
+    def allow_unauthenticated_access(**)
+      skip_before_action(:require_authentication, **)
     end
   end
 
   private
-    def authenticated?
-      resume_session
-    end
 
-    def require_authentication
-      resume_session || request_authentication
-    end
+  def authenticated?
+    resume_session
+  end
 
-    def resume_session
-      Current.session ||= find_session_by_cookie
-    end
+  def require_authentication
+    resume_session || request_authentication
+  end
 
-    def find_session_by_cookie
-      Session.find_by(id: cookies.signed[:session_id]) if cookies.signed[:session_id]
-    end
+  def resume_session
+    Current.session ||= find_session_by_cookie
+  end
 
-    def request_authentication
-      respond_to do |format|
-        format.json { render json: { error: "Unauthenticated" }, status: :unauthorized }
-        format.any { head :unauthorized }
-      end
-    end
+  def find_session_by_cookie
+    Session.find_by(id: cookies.signed[:session_id]) if cookies.signed[:session_id]
+  end
 
-    def start_new_session_for(user)
-      user.sessions.create!(user_agent: request.user_agent, ip_address: request.remote_ip).tap do |session|
-        Current.session = session
-        cookies.signed.permanent[:session_id] = { value: session.id, httponly: true, same_site: :lax }
-      end
+  def request_authentication
+    respond_to do |format|
+      format.json { render json: { error: 'Unauthenticated' }, status: :unauthorized }
+      format.any { head :unauthorized }
     end
+  end
 
-    def terminate_session
-      Current.session.destroy
-      cookies.delete(:session_id)
+  def start_new_session_for(user)
+    user.sessions.create!(user_agent: request.user_agent, ip_address: request.remote_ip).tap do |session|
+      Current.session = session
+      cookies.signed.permanent[:session_id] = { value: session.id, httponly: true, same_site: :lax }
     end
+  end
+
+  def terminate_session
+    Current.session.destroy
+    cookies.delete(:session_id)
+  end
 end

@@ -1,7 +1,8 @@
 import path from 'node:path'
-import { defineConfig } from 'vite'
+import { configDefaults, defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import RubyPlugin from 'vite-plugin-ruby'
+import MarkdownReporter from './reporters/vitest/markdown-reporter.mts';
 
 export default defineConfig({
   plugins: [
@@ -26,6 +27,9 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: [path.resolve(import.meta.dirname, 'app/javascript/test/setup.js')],
+    reporters: process.env.CI 
+      ? [['html', { singleFile: true, outputDir: '../../vitest-results/' }], new MarkdownReporter(), 'github-actions']
+      : ['default'],
     coverage: {
       provider: 'v8',
       reporter: ['json', 'json-summary', 'text'],

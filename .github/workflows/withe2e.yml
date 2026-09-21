@@ -1,0 +1,291 @@
+on:
+  push:
+    branches: [has-auth]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
+concurrency:
+  group: rails-with-react-e2e-testing
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  IMAGE_NAME: 00rawrus00/rails-with-react
+  IMAGE_TAG: latest
+
+name: test workflow
+
+jobs:
+  rails_lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+
+      - name: Install ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          cache-version: 1
+      
+      - name: Run rubocop
+        run: |
+          bundle exec rubocop | tee -a rubocop_results.txt
+          echo "Rubocop results" >> $GITHUB_STEP_SUMMARY
+          echo "===============" >> $GITHUB_STEP_SUMMARY
+          cat rubocop_results.txt >> $GITHUB_STEP_SUMMARY
+
+  rails_test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: rails_react_monolith
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: rails_react_monolith_development
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+
+      - name: Install ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          cache-version: 1
+
+      - name: Run rspec unit tests
+        env:
+          DB_URL: postgres://rails_react_monolith:password@localhost:5432/rails_react_monolith_development
+        run: |
+          bundle exec rspec
+          echo "Rails Coverage Report" >> $GITHUB_STEP_SUMMARY 
+          echo "=====================" >> $GITHUB_STEP_SUMMARY
+          cat coverage/coverage.json | jq .metrics >> $GITHUB_STEP_SUMMARY
+      
+      - name: Archive coverage report
+        uses: actions/upload-artifact@v7
+        with:
+          name: rails-coverage.html
+          path: coverage/index.html
+          overwrite: true
+
+  frontend_lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+
+      - name: Install nodejs
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.tool-versions'
+          cache-dependency-path: 'package-lock.json'
+
+      - name: Ensure packages installed
+        run: npm ci
+
+      - name: Run linter
+        run: |
+          npx biome check --error-on-warnings --reporter=github --reporter=json-pretty | tee -a $GITHUB_STEP_SUMMARY
+
+  frontend_test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+
+      - name: Install nodejs
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.tool-versions'
+          cache-dependency-path: 'package-lock.json'
+
+      - name: Ensure packages installed
+        run: npm ci
+
+      - name: Run vitest
+        run: |
+          npx vitest run --coverage
+          cat vitest-report.md  >> $GITHUB_STEP_SUMMARY
+
+      - uses: actions/upload-artifact@v7
+        id: upload-report
+        with:
+          name: vitest-results.html
+          path: vitest-results/index.html
+          overwrite: true
+
+      - name: Archive coverage report
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-coverage.json
+          path: coverage/coverage-final.json
+          overwrite: true
+
+      - name: Link HTML report
+        run: echo "::notice title=Vitest HTML report::$REPORT_URL"
+        env:
+          REPORT_URL: https://viewer.vitest.dev/?url=${{ steps.upload-report.outputs.artifact-url }}
+
+  docker_build:
+    runs-on: ubuntu-latest
+
+    outputs:
+      digest: ${{ steps.build-image.outputs.digest }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log into registry
+        uses: docker/login-action@v2.1.0
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PAT }} 
+
+      - name: Build image
+        id: build-image
+        uses: docker/build-push-action@v7
+        with:
+          push: true
+          tags: 00rawrus00/rails-with-react:latest
+          attests: type=sbom,generator=docker/buildkit-syft-scanner:stable-1
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+    
+  docker_scan:
+    runs-on: ubuntu-latest
+    needs: [docker_build]
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log into registry
+        uses: docker/login-action@v2.1.0
+        with:
+          username: ${{ secrets.DOCKER_USER }}
+          password: ${{ secrets.DOCKER_PAT }}      
+
+      - name: Generate SBOM and CVE report with Docker scout
+        uses: docker/scout-action@v1
+        with:
+          command: sbom
+          format: cyclonedx
+          image: 00rawrus00/rails-with-react:latest
+          output: rails-with-react-sbom.json
+          only-severities: critical,high
+      
+      - name: Generate CVE report
+        uses: docker/scout-action@v1
+        with:
+          command: cves
+          image: 00rawrus00/rails-with-react:latest
+          only-severities: critical,high
+          output: rails-with-react-cves.json
+          only-fixed: true
+          write-comment: true
+
+      - name: Check sbom size
+        run: du -sh rails-with-react-sbom.json
+
+      # Max attestation size 16Mb
+      - name: Publish attestation
+        uses: actions/attest@v4
+        with:
+          subject-name: 00rawrus00/rails-with-react
+          subject-digest: ${{ needs.docker_build.outputs.digest }}
+          sbom-path: rails-with-react-sbom.json
+          show-summary: true
+        continue-on-error: true
+
+  e2e_test:
+    needs: docker_build
+    runs-on: ubuntu-latest
+
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: rails_react_monolith
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: rails_react_monolith_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U rails_react_monolith -d rails_react_monolith_test" 
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      web:
+        image: 00rawrus00/rails-with-react:latest
+        env:
+          DB_URL: postgres://rails_react_monolith:password@postgres:5432/rails_react_monolith_test
+          REDIS_URL: redis://redis:6379/0
+          RAILS_ENV: test
+        ports:
+          - 3000:3000
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+
+      - name: Install nodejs
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.tool-versions'
+          cache-dependency-path: 'package-lock.json'
+
+      - name: Ensure packages installed
+        run: npm ci
+
+      - name: Install playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run e2e tests
+        env:
+          BASE_URL: http://web:3000
+        run: |
+          npm run test:e2e
+          cat playwright-report.md >> $GITHUB_STEP_SUMMARY
