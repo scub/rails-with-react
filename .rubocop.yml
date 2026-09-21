@@ -17,9 +17,21 @@ RSpec/MultipleExpectations:
     - spec/controllers/api/v1/notes_controller_spec.rb
     - spec/controllers/boards_controller_spec.rb
 
+#Layout/LineLength:
+#  Exclude:
+#    - lib/tasks/coverage.rb
+
 Lint/EmptyBlock:
   Exclude:
     - spec/factories/board_factory.rb
+
+#Metrics/BlockLength:
+#  Exclude:
+#    - lib/tasks/coverage.rb
+#
+#Rails/Exit:
+#  Exclude:
+#    - lib/tasks/coverage.rb
 
 AllCops:
   NewCops: enable
