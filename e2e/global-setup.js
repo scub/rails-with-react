@@ -10,13 +10,16 @@ async function globalSetup(config) {
   const password = `${Date.now()}-${Math.floor(Math.random() * 1e6)}-e2e`;
 
   await page.goto('/');
-  await page.getByRole('button', { name: '☰' }).click();
+  await page.getByRole('button', { name: 'Menu' }).click();
   await page.getByRole('button', { name: 'Log in' }).click();
   await page.getByRole('button', { name: 'Need an account? Sign up' }).click();
   await page.getByLabel('Email address').fill(email);
   await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByLabel('Confirm password').fill(password);
-  await page.getByRole('button', { name: 'Sign up' }).click();
+  await Promise.all([
+    page.waitForNavigation(),
+    page.getByRole('button', { name: 'Sign up' }).click(),
+  ]);
   await page.waitForLoadState('networkidle'); // post-signup window.reload()
 
   await page.context().storageState({ path: storageState });
