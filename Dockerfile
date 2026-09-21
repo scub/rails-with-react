@@ -8,6 +8,14 @@ RUN apt-get update -qq \
     && npm install -g yarn \
     && rm -rf /var/lib/apt/lists/*
 
+# Service user
+ARG SVCUSER=svc
+RUN groupadd -r $SVCUSER \
+    && useradd --shell /bin/nologin --gid $SVCUSER --home-dir /app --system --no-create-home $SVCUSER \
+    && mkdir -p /app \
+    && chown -R $SVCUSER:$SVCUSER /app
+
+USER $SVCUSER
 WORKDIR /app
 
 COPY Gemfile Gemfile.lock ./
