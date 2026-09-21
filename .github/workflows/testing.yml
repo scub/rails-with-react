@@ -42,6 +42,35 @@ jobs:
           echo "===============" >> $GITHUB_STEP_SUMMARY
           cat rubocop_results.txt >> $GITHUB_STEP_SUMMARY
 
+  rails_audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+
+      - name: Install ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          cache-version: 1
+      
+      - name: Run bundle install
+        run: |
+          bundle config set --local frozen true
+          bundle install
+
+      - name: Run bundle audit
+        run: |
+          echo "Bundle audit results" >> $GITHUB_STEP_SUMMARY
+          echo "====================" >> $GITHUB_STEP_SUMMARY
+          bundle exec bundle-audit check --update >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate brakeman Report
+        run: |
+          bundle exec brakeman
+          bundle exec brakeman -f markdown >> $GITHUB_STEP_SUMMARY
+
   rails_test:
     runs-on: ubuntu-latest
 
@@ -105,6 +134,26 @@ jobs:
       - name: Run linter
         run: |
           npx biome check --error-on-warnings --reporter=github --reporter=json-pretty | tee -a $GITHUB_STEP_SUMMARY
+
+  frontend_audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v7
+
+      - name: Install nodejs
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: '.tool-versions'
+          cache-dependency-path: 'package-lock.json'
+
+      - name: Install depedencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit 2>/dev/null | tee -a $GITHUB_STEP_SUMMARY
+      
 
   frontend_test:
     runs-on: ubuntu-latest
