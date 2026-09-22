@@ -21,4 +21,7 @@ COPY . .
 
 EXPOSE 3000
 
+HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=5 \
+  CMD curl -f http://localhost:3000/up || exit 1
+
 CMD ["bin/rails", "server", "-b", "0.0.0.0"]
