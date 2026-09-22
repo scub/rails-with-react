@@ -29,7 +29,7 @@ services:
       timeout: 5s
       retries: 10
 
-  web:
+  app:
     build: .
     command: bash -c "bin/rails db:prepare && bin/rails server -b 0.0.0.0"
     volumes:
@@ -40,6 +40,7 @@ services:
       - "3000:3000"
     environment:
       <<: *defaults
+      RAILS_ENV: "test"
     depends_on:
       db:
         condition: service_healthy
