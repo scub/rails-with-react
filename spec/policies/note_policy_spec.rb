@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe NotePolicy do
   let(:board) { create(:board) }
-  let(:user) { nil }
+  let(:user) { create(:user) }
   let(:policy) { described_class.new(user, note) }
 
   describe '#create?' do

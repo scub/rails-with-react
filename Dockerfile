@@ -2,7 +2,7 @@ FROM ruby:3.4-slim
 
 RUN apt-get update -qq \
     && apt-get install -y --no-install-recommends \
-       build-essential libpq-dev libyaml-dev curl git ca-certificates gnupg \
+       build-essential libjemalloc-dev libpq-dev libyaml-dev curl git ca-certificates gnupg postgresql-client \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y --no-install-recommends nodejs \
     && npm install -g yarn \
@@ -24,4 +24,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=5 \
   CMD curl -f http://localhost:3000/up || exit 1
 
+ENTRYPOINT [ "bin/docker-entrypoint" ]
 CMD ["bin/rails", "server", "-b", "0.0.0.0"]

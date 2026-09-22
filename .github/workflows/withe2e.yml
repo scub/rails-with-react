@@ -1,8 +1,6 @@
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    branches: [has-auth]
   workflow_dispatch:
 
 permissions:
@@ -12,14 +10,18 @@ permissions:
   artifact-metadata: write
 
 concurrency:
-  group: rails-with-react-testing
+  group: rails-with-react-e2e-testing
   cancel-in-progress: true
 
 defaults:
   run:
     shell: bash
 
-name: Lint, Test, Build, Scan 
+env:
+  IMAGE_NAME: 00rawrus00/rails-with-react
+  IMAGE_TAG: latest
+
+name: test workflow
 
 jobs:
   rails_lint:

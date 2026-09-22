@@ -1,4 +1,7 @@
+# frozen_string_literal: true
+
 module ApplicationCable
+  # Makes ActionCable::Connection aware of users
   class Connection < ActionCable::Connection::Base
     identified_by :current_user
 
@@ -7,10 +10,11 @@ module ApplicationCable
     end
 
     private
-      def set_current_user
-        if session = Session.find_by(id: cookies.signed[:session_id])
-          self.current_user = session.user
-        end
+
+    def set_current_user
+      if (session = Session.find_by(id: cookies.signed[:session_id]))
+        self.current_user = session.user
       end
+    end
   end
 end

@@ -23,8 +23,13 @@ RSpec.describe Api::V1::NotesController do
   end
 
   describe 'POST create' do
+    let(:user) { create(:user) }
+
+    before { sign_in_as(user) }
+
     context 'with valid params' do
       before do
+        sign_in_as(user)
         post :create, params: { board_id: board.id, note: { content: 'Buy milk' } }
       end
 

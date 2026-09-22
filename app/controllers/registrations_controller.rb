@@ -1,8 +1,11 @@
+# frozen_string_literal: true
+
+# Registrations controller from `rails generate authentication`
 class RegistrationsController < ApplicationController
   allow_unauthenticated_access only: :create
   skip_after_action :verify_authorized
   rate_limit to: 10, within: 3.minutes, only: :create,
-    with: -> { render json: { error: "Try again later" }, status: :too_many_requests }
+             with: -> { render json: { error: 'Try again later' }, status: :too_many_requests }
 
   def create
     user = User.new(params.permit(:email_address, :password, :password_confirmation))

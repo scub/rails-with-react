@@ -6,9 +6,16 @@ if [ -z "${LD_PRELOAD+x}" ]; then
     export LD_PRELOAD
 fi
 
-# If running the rails server then create or migrate existing database
-if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
-  ./bin/rails db:prepare
+# If running the rails server
+if [ "${1}" == "bin/rails"  ] && [ "${2}" == "server" ]; then
+  # With RAILS_ENV set to development or test
+  [[ "$RAILS_ENV" =~ development|test ]] && {
+    # But wait for db to be online and run migrations
+    until pg_isready -d "$DB_URL"; do sleep 1; done
+    bin/rails db:prepare
+  }
+  # When RAILS_ENV is not in development, build vite assets
+  [[ "$RAILS_ENV" != "development" ]] && bin/vite build
 fi
 
 exec "${@}"
