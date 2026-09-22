@@ -18,14 +18,14 @@ RUN groupadd -r $SVCUSER \
 USER $SVCUSER
 WORKDIR /app
 
-COPY Gemfile Gemfile.lock ./
+COPY --chown=$SVCUSER:$SVCUSER Gemfile Gemfile.lock ./
 RUN bundle config set --local frozen true \
     && bundle install
 
-COPY package.json package-lock.json ./
+COPY --chown=$SVCUSER:$SVCUSER package.json package-lock.json ./
 RUN npm ci
 
-COPY . .
+COPY --chown=$SVCUSER:$SVCUSER . .
 
 EXPOSE 3000
 
