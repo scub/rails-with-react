@@ -35,7 +35,13 @@ function AuthMenu() {
 
   return (
     <div className="position-relative">
-      <button type="button" className="btn btn-outline-light btn-sm" onClick={() => setMenuOpen((open) => !open)}>☰</button>
+      <button type="button" className="icon-btn btn btn-outline-light btn-sm" onClick={() => setMenuOpen((open) => !open)}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
 
       {menuOpen && (
         <div className="dropdown-menu show position-absolute end-0 mt-1">
@@ -59,7 +65,7 @@ function AuthMenu() {
                     {mode === 'login' ? 'Login to your account' : 'Create a new account'}
                   </Dialog.Description>
                   <Dialog.Close asChild>
-                    <button type="button" className="btn-close" aria-label="Close" />
+                    <button type="button" className="btn-close btn-close-white" aria-label="Close" />
                   </Dialog.Close>
                 </div>
                 <div className="modal-body">

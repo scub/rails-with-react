@@ -72,3 +72,10 @@
   --bs-btn-active-border-color: #4cadcc;
   --bs-btn-focus-shadow-rgb: 90, 204, 240;
 }
+
+[data-theme='viking'] .dropdown-menu {
+  --bs-dropdown-bg: #172e3c;
+  --bs-dropdown-link-color: #f7e9f9;
+  --bs-dropdown-link-hover-bg: #254f60;
+  --bs-dropdown-link-hover-color: #f7e9f9;
+}

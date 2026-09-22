@@ -67,3 +67,10 @@ samp {
   --bs-btn-active-border-color: #cf4dea;
   --bs-btn-focus-shadow-rgb: 229, 117, 248;
 }
+
+.dropdown-menu {
+  --bs-dropdown-bg: #3a0f45;
+  --bs-dropdown-link-color: #f7e9f9;
+  --bs-dropdown-link-hover-bg: #5c2a6b;
+  --bs-dropdown-link-hover-color: #f7e9f9;
+}
