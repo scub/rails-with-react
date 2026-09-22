@@ -2,8 +2,8 @@
 
 require 'rails_helper'
 
-RSpec.describe 'Registrations' do
-  describe 'POST /registrations' do
+RSpec.describe 'Registrations', openapi: { tags: %w[Registrations] } do
+  describe 'POST /registrations', openapi: { summary: 'Sign up' } do
     it 'creates a user and returns success' do
       post '/registrations',
            params: { email_address: 'penny@loves-to.dev', password: 'password12345',
