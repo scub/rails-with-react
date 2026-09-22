@@ -57,7 +57,7 @@ describe('notesStore', () => {
 
       cableStore.state.event = {
         event_type: 'message',
-        message: { channel: 'notes', board_id: 2, id: 3, content: 'someone else\'s board' },
+        message: { channel: 'notes', board_id: 2, id: 3, content: "someone else's board" },
       };
       await Promise.resolve();
 

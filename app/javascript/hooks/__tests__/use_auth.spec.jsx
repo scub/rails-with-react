@@ -27,9 +27,9 @@ describe('useAuth', () => {
 
       await act(async () => {
         await result.current.submit('login', {
-            emailAddress: 'vitest@loves-to.dev',
-            password: 'password12345',
-            passwordConfirmation: 'password12345',
+          emailAddress: 'vitest@loves-to.dev',
+          password: 'password12345',
+          passwordConfirmation: 'password12345',
         });
       });
 
@@ -58,13 +58,15 @@ describe('useAuth', () => {
         data: {
           email_address: 'vitest@loves-to.dev',
           password: 'password12345',
-          password_confirmation: 'password12345',   
-        }
+          password_confirmation: 'password12345',
+        },
       });
     });
 
     it('surfaces the { error } shape from a failed login', async () => {
-      mockFetchPost.mockRejectedValue({ json: () => Promise.resolve({ error: 'Try another email address or password.'}) });
+      mockFetchPost.mockRejectedValue({
+        json: () => Promise.resolve({ error: 'Try another email address or password.' }),
+      });
       const { result } = renderHook(() => useAuth());
 
       await act(async () => {
@@ -81,7 +83,11 @@ describe('useAuth', () => {
 
       await act(async () => {
         await expect(
-          result.current.submit('signup', { emailAddress: 'vitest@loves-to.dev', password: 'a', passwordConfirmation: 'z' })
+          result.current.submit('signup', {
+            emailAddress: 'vitest@loves-to.dev',
+            password: 'a',
+            passwordConfirmation: 'z',
+          })
         ).rejects.toThrow('Email has already been taken');
       });
     });
@@ -110,10 +116,10 @@ describe('useAuth', () => {
 
       await act(async () => {
         await expect(
-          result.current.submit('login', { emailAddress: 'penny@loves-to.dev', password: 'password12345'})
+          result.current.submit('login', { emailAddress: 'penny@loves-to.dev', password: 'password12345' })
         ).rejects.toThrow('');
       });
-    })
+    });
   });
 
   describe('logout', () => {
@@ -128,5 +134,5 @@ describe('useAuth', () => {
       expect(mockFetcher).toHaveBeenCalledWith('/session', { method: 'DELETE', internal: true });
       expect(window.location.reload).toHaveBeenCalled();
     });
-  }); 
+  });
 });
