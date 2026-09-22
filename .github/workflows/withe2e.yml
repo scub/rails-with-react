@@ -38,11 +38,10 @@ jobs:
           cache-version: 1
       
       - name: Run rubocop
-        run: |
-          bundle exec rubocop | tee -a rubocop_results.txt
-          echo "Rubocop results" >> $GITHUB_STEP_SUMMARY
-          echo "===============" >> $GITHUB_STEP_SUMMARY
-          cat rubocop_results.txt >> $GITHUB_STEP_SUMMARY
+        env:
+          # config/database.yml requires DB_URL to boot Rails; rubocop never connects
+          DB_URL: postgres://unused:unused@localhost:5432/unused
+        run: bundle exec rake rubocop:markdown
 
   rails_test:
     runs-on: ubuntu-latest
@@ -75,11 +74,7 @@ jobs:
       - name: Run rspec unit tests
         env:
           DB_URL: postgres://rails_react_monolith:password@localhost:5432/rails_react_monolith_development
-        run: |
-          bundle exec rspec
-          echo "Rails Coverage Report" >> $GITHUB_STEP_SUMMARY 
-          echo "=====================" >> $GITHUB_STEP_SUMMARY
-          cat coverage/coverage.json | jq .metrics >> $GITHUB_STEP_SUMMARY
+        run: bundle exec rake coverage:report
       
       - name: Archive coverage report
         uses: actions/upload-artifact@v7
@@ -106,7 +101,10 @@ jobs:
 
       - name: Run linter
         run: |
-          npx biome check --error-on-warnings --reporter=github --reporter=json-pretty | tee -a $GITHUB_STEP_SUMMARY
+          status=0
+          npx biome check --error-on-warnings --reporter=github --reporter=json --reporter-file=biome-report.json || status=$?
+          node scripts/biome-summary.mjs biome-report.json >> "$GITHUB_STEP_SUMMARY"
+          exit $status
 
   frontend_test:
     runs-on: ubuntu-latest
@@ -289,3 +287,16 @@ jobs:
         run: |
           npm run test:e2e
           cat playwright-report.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate Allure report
+        if: ${{ !cancelled() }}
+        run: npm run test:e2e:report
+
+      - name: Archive Allure report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: allure-report
+          path: allure-report/
+          if-no-files-found: ignore
+          overwrite: true
