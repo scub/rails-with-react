@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Appends a ZAP markdown report to the job summary. A step summary is limited to 1 MiB and anything
 # larger is dropped, so oversized reports are cut with some headroom.
-# Usage: scripts/zap-report-summary.sh <title> <artifact-name> [report.md]
+# Usage: .github/scripts/zap/report-summary.sh <title> <artifact-name> [report.md]
 set -euo pipefail
 
 title=$1
