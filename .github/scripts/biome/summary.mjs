@@ -1,5 +1,5 @@
 // Renders a Biome JSON report as GitHub-flavored markdown tables.
-// Usage: node scripts/biome-summary.mjs [biome-report.json] >> "$GITHUB_STEP_SUMMARY"
+// Usage: node .github/scripts/biome/summary.mjs [biome-report.json] >> "$GITHUB_STEP_SUMMARY"
 import { readFileSync } from "node:fs";
 
 const escape = (text) => String(text ?? "").replaceAll("|", "\\|").replaceAll("\n", " ");

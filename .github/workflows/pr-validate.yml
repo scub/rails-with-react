@@ -1,6 +1,8 @@
 on:
-  push:
-    branches: [service-user]
+  pull_request:
+    types: [opened, edited, synchronize]
+    branches:
+      - "main"
   workflow_dispatch:
     inputs:
       zap_max_minutes:
@@ -8,11 +10,9 @@ on:
         required: false
         default: ''
 
+# Read-only: no attestations, code scanning or latest tag come from this workflow
 permissions:
   contents: read
-  id-token: write
-  attestations: write
-  artifact-metadata: write
 
 concurrency:
   group: rails-with-react-e2e-testing
@@ -24,7 +24,6 @@ defaults:
 
 env:
   IMAGE_NAME: 00rawrus00/rails-with-react
-  IMAGE_TAG: latest
 
 name: test workflow
 
@@ -41,7 +40,7 @@ jobs:
         with:
           bundler-cache: true
           cache-version: 1
-      
+
       - name: Run rubocop
         env:
           # config/database.yml requires DB_URL to boot Rails; rubocop never connects
@@ -80,7 +79,7 @@ jobs:
         env:
           DB_URL: postgres://rails_react_monolith:password@localhost:5432/rails_react_monolith_development
         run: bundle exec rake coverage:report
-      
+
       - name: Archive coverage report
         uses: actions/upload-artifact@v7
         with:
@@ -108,12 +107,12 @@ jobs:
         run: |
           status=0
           npx biome check --error-on-warnings --reporter=github --reporter=json --reporter-file=biome-report.json || status=$?
-          node scripts/biome-summary.mjs biome-report.json >> "$GITHUB_STEP_SUMMARY"
+          node .github/scripts/biome/summary.mjs biome-report.json >> "$GITHUB_STEP_SUMMARY"
           exit $status
 
   frontend_test:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v7
@@ -156,6 +155,8 @@ jobs:
 
     outputs:
       digest: ${{ steps.build-image.outputs.digest }}
+      tag: ${{ steps.tags.outputs.primary }}
+      image: ${{ env.IMAGE_NAME }}:${{ steps.tags.outputs.primary }}
 
     steps:
       - name: Checkout repo
@@ -168,29 +169,34 @@ jobs:
         uses: docker/login-action@v2.1.0
         with:
           username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKER_PAT }} 
+          password: ${{ secrets.DOCKER_PAT }}
 
-      - name: Build image
+      # A throwaway tag so the e2e and ZAP service containers can pull the image under test.
+      # This workflow never moves latest.
+      - name: Compute image tags
+        id: tags
+        env:
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          primary="e2e-${GITHUB_RUN_NUMBER}-${HEAD_SHA::7}"
+          echo "primary=$primary" >> "$GITHUB_OUTPUT"
+          echo "tags=${IMAGE_NAME}:${primary}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push image
         id: build-image
         uses: docker/build-push-action@v7
         with:
           push: true
-          tags: 00rawrus00/rails-with-react:latest
-          attests: type=sbom,generator=docker/buildkit-syft-scanner:stable-1
+          tags: ${{ steps.tags.outputs.tags }}
+          # No attestations from this workflow
+          provenance: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
-    
+
+  # Shows what testing.yml would publish and attest for this image. Nothing is published from here.
   docker_scan:
     runs-on: ubuntu-latest
     needs: [docker_build]
-
-    # Job-level permissions replace the workflow-level ones, so repeat what the attest step needs
-    permissions:
-      contents: read
-      id-token: write
-      attestations: write
-      artifact-metadata: write
-      security-events: write
 
     steps:
       - name: Checkout repo
@@ -203,47 +209,37 @@ jobs:
         uses: docker/login-action@v2.1.0
         with:
           username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKER_PAT }}      
+          password: ${{ secrets.DOCKER_PAT }}
 
-      - name: Generate SBOM and CVE report with Docker scout
+      - name: Generate SBOM
         uses: docker/scout-action@v1
         with:
           command: sbom
           format: cyclonedx
-          image: 00rawrus00/rails-with-react:latest
+          image: ${{ env.IMAGE_NAME }}@${{ needs.docker_build.outputs.digest }}
           output: rails-with-react-sbom.json
-          only-severities: critical,high
-      
+
       - name: Generate CVE report
         uses: docker/scout-action@v1
         with:
           command: cves
-          image: 00rawrus00/rails-with-react:latest
+          image: ${{ env.IMAGE_NAME }}@${{ needs.docker_build.outputs.digest }}
           only-severities: critical,high
           output: rails-with-react-cves.json
-          sarif-file: rails-with-react-cves.sarif
           only-fixed: true
-          write-comment: true
-
-      - name: Upload CVE results to code scanning
-        if: ${{ !cancelled() && hashFiles('rails-with-react-cves.sarif') != '' }}
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: rails-with-react-cves.sarif
-          category: docker-scout
+          write-comment: false
 
       - name: Check sbom size
         run: du -sh rails-with-react-sbom.json
 
-      # Max attestation size 16Mb
-      - name: Publish attestation
-        uses: actions/attest@v4
+      - name: Archive scan reports
+        uses: actions/upload-artifact@v7
         with:
-          subject-name: 00rawrus00/rails-with-react
-          subject-digest: ${{ needs.docker_build.outputs.digest }}
-          sbom-path: rails-with-react-sbom.json
-          show-summary: true
-        continue-on-error: true
+          name: image-scan
+          path: |
+            rails-with-react-sbom.json
+            rails-with-react-cves.json
+          overwrite: true
 
   e2e_test:
     needs: docker_build
@@ -262,7 +258,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U rails_react_monolith -d rails_react_monolith_test" 
+          --health-cmd "pg_isready -U rails_react_monolith -d rails_react_monolith_test"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -278,7 +274,7 @@ jobs:
           --health-retries 5
 
       web:
-        image: 00rawrus00/rails-with-react:latest
+        image: ${{ needs.docker_build.outputs.image }}
         env:
           DB_URL: postgres://rails_react_monolith:password@postgres:5432/rails_react_monolith_test
           REDIS_URL: redis://redis:6379/0
@@ -352,7 +348,7 @@ jobs:
           --health-retries 5
 
       web:
-        image: 00rawrus00/rails-with-react:latest
+        image: ${{ needs.docker_build.outputs.image }}
         env:
           DB_URL: postgres://rails_react_monolith:password@postgres:5432/rails_react_monolith_test
           REDIS_URL: redis://redis:6379/0
@@ -365,63 +361,13 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v7
 
-      # Any HTTP response counts as up (the app may redirect to login), only connection failures are retried.
-      - name: Wait for web service
-        run: >-
-          curl --silent --show-error --output /dev/null
-          --retry 30 --retry-delay 2 --retry-connrefused --retry-all-errors
-          http://localhost:3000/
-
-      # Sign up through the JSON endpoint (RAILS_ENV=test has CSRF protection off) and give ZAP the session cookie.
-      # The action forwards ZAP_AUTH_HEADER and ZAP_AUTH_HEADER_VALUE into the ZAP container.
+      # Signs up a throwaway user and hands its session cookie to ZAP
       - name: Create ZAP test user
-        run: |
-          password="$(openssl rand -hex 24)"
-          echo "::add-mask::$password"
-          email="zap-$(date +%s)@example.test"
-          status=$(jq -n --arg email "$email" --arg password "$password" \
-            '{email_address: $email, password: $password, password_confirmation: $password}' |
-            curl --silent --show-error --request POST http://localhost:3000/registrations \
-              --header 'Content-Type: application/json' --data @- \
-              --dump-header "$RUNNER_TEMP/zap-headers.txt" --output "$RUNNER_TEMP/zap-body.json" \
-              --write-out '%{http_code}')
-          if [ "$status" != "201" ]; then
-            echo "::error::Signup returned HTTP $status"
-            cat "$RUNNER_TEMP/zap-body.json"
-            exit 1
-          fi
-          cookie=$(tr -d '\r' < "$RUNNER_TEMP/zap-headers.txt" |
-            sed -nE 's/^[Ss]et-[Cc]ookie: (session_id=[^;]+).*/\1/p' | head -n 1)
-          if [ -z "$cookie" ]; then
-            echo "::error::Signup response had no session_id cookie"
-            exit 1
-          fi
-          echo "::add-mask::$cookie"
-          echo "::add-mask::${cookie#session_id=}"
-          {
-            echo "ZAP_AUTH_HEADER=Cookie"
-            echo "ZAP_AUTH_HEADER_VALUE=$cookie"
-          } >> "$GITHUB_ENV"
+        run: bash .github/scripts/zap/create-test-user.sh
 
-      # DELETE /session destroys the test user's session row, which would log ZAP out mid-scan, so keep it
-      # out of the scan. Several -config options share one -z argument.
       - name: Configure ZAP options
         id: zap_options
-        run: |
-          spider_options=""
-          zap_config='-config globalexcludeurl.url_list.url(0).regex=.*/session$ -config globalexcludeurl.url_list.url(0).enabled=true'
-          if [ -n "$ZAP_MAX_MINUTES" ]; then
-            if ! [[ "$ZAP_MAX_MINUTES" =~ ^[1-9][0-9]*$ ]]; then
-              echo "::error::ZAP_MAX_MINUTES must be a positive integer, got '$ZAP_MAX_MINUTES'"
-              exit 1
-            fi
-            # -m limits the spider; the scanner option limits the active scan
-            spider_options="-m $ZAP_MAX_MINUTES"
-            zap_config="$zap_config -config scanner.maxScanDurationInMins=$ZAP_MAX_MINUTES"
-          fi
-          echo "cmd_options=$spider_options -z \"$zap_config\"" >> "$GITHUB_OUTPUT"
-          # zap-api-scan.py has no spider, so it only takes the -z options
-          echo "api_cmd_options=-z \"$zap_config\"" >> "$GITHUB_OUTPUT"
+        run: bash .github/scripts/zap/configure-options.sh
 
       # Runs ZAP in Docker on the runner with --network=host, so the target is the published port.
       # The action uploads report_md.md, report_json.json and report_html.html as the zap-report artifact.
@@ -436,7 +382,7 @@ jobs:
 
       - name: Add ZAP full scan report to job summary
         if: ${{ !cancelled() && hashFiles('report_md.md') != '' }}
-        run: bash scripts/zap-report-summary.sh "ZAP Full Scan" zap-report
+        run: bash .github/scripts/zap/report-summary.sh "ZAP Full Scan" zap-report
 
       # Both actions write report_*.* to the workspace root, so clear the first scan's files
       - name: Clear full scan reports
@@ -457,4 +403,4 @@ jobs:
 
       - name: Add ZAP API scan report to job summary
         if: ${{ !cancelled() && hashFiles('report_md.md') != '' }}
-        run: bash scripts/zap-report-summary.sh "ZAP API Scan" zap-api-report
+        run: bash .github/scripts/zap/report-summary.sh "ZAP API Scan" zap-api-report

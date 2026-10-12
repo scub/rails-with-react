@@ -65,4 +65,4 @@ node_modules
 
 # Assorted
 .cache/**
-
+.bash_history
