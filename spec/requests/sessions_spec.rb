@@ -2,8 +2,8 @@
 
 require 'rails_helper'
 
-RSpec.describe 'Sessions' do
-  describe 'POST /session' do
+RSpec.describe 'Sessions', openapi: { tags: %w[Sessions] } do
+  describe 'POST /session', openapi: { summary: 'Log in' } do
     let(:user) { create(:user, password: 'password12345') }
 
     it 'returns correct status with valid creds' do
@@ -23,7 +23,7 @@ RSpec.describe 'Sessions' do
     end
   end
 
-  describe 'DELETE /session' do
+  describe 'DELETE /session', openapi: { summary: 'Log out' } do
     let(:user) { create(:user, password: 'password12345') }
 
     before do

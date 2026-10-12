@@ -75,6 +75,7 @@ end
 
 group :test do
   gem 'rails-controller-testing'
+  gem 'rspec-openapi', require: false          # https://github.com/exoego/rspec-openapi
   gem 'shoulda-matchers'                       # https://github.com/thoughtbot/shoulda-matchers
   gem 'simplecov', require: false              # https://github.com/simplecov-ruby/simplecov
   gem 'simplecov-json', require: false         # https://github.com/vicentllongo/simplecov-json

@@ -2,8 +2,8 @@
 
 require 'rails_helper'
 
-RSpec.describe 'Passwords' do
-  describe 'POST /passwords' do
+RSpec.describe 'Passwords', openapi: { tags: %w[Passwords] } do
+  describe 'POST /passwords', openapi: { summary: 'Request a password reset' } do
     it 'sends reset email when user exists' do
       user = create(:user)
 
@@ -23,7 +23,7 @@ RSpec.describe 'Passwords' do
     end
   end
 
-  describe 'PATCH /passwords/:token' do
+  describe 'PATCH /passwords/:token', openapi: { summary: 'Reset a password' } do
     let(:user) { create(:user) }
     let(:token) { user.password_reset_token }
 
