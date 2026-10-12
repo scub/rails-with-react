@@ -2,6 +2,11 @@ on:
   push:
     branches: [service-user]
   workflow_dispatch:
+    inputs:
+      zap_max_minutes:
+        description: 'ZAP scan time limit in minutes, applied to the spider and to the active scan (empty = no limit)'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -300,3 +305,125 @@ jobs:
           path: allure-report/
           if-no-files-found: ignore
           overwrite: true
+
+  zap_scan:
+    needs: docker_build
+    runs-on: ubuntu-latest
+
+    env:
+      # Empty means no limit. Set via the workflow_dispatch input, or a repository variable for push runs.
+      ZAP_MAX_MINUTES: ${{ inputs.zap_max_minutes || vars.ZAP_MAX_MINUTES }}
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: rails_react_monolith
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: rails_react_monolith_test
+        options: >-
+          --health-cmd "pg_isready -U rails_react_monolith -d rails_react_monolith_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      web:
+        image: 00rawrus00/rails-with-react:latest
+        env:
+          DB_URL: postgres://rails_react_monolith:password@postgres:5432/rails_react_monolith_test
+          REDIS_URL: redis://redis:6379/0
+          RAILS_ENV: test
+        ports:
+          - 3000:3000
+
+    steps:
+      # Any HTTP response counts as up (the app may redirect to login), only connection failures are retried.
+      - name: Wait for web service
+        run: >-
+          curl --silent --show-error --output /dev/null
+          --retry 30 --retry-delay 2 --retry-connrefused --retry-all-errors
+          http://localhost:3000/
+
+      # Sign up through the JSON endpoint (RAILS_ENV=test has CSRF protection off) and give ZAP the session cookie.
+      # The action forwards ZAP_AUTH_HEADER and ZAP_AUTH_HEADER_VALUE into the ZAP container.
+      - name: Create ZAP test user
+        run: |
+          password="$(openssl rand -hex 24)"
+          echo "::add-mask::$password"
+          email="zap-$(date +%s)@example.test"
+          status=$(jq -n --arg email "$email" --arg password "$password" \
+            '{email_address: $email, password: $password, password_confirmation: $password}' |
+            curl --silent --show-error --request POST http://localhost:3000/registrations \
+              --header 'Content-Type: application/json' --data @- \
+              --dump-header "$RUNNER_TEMP/zap-headers.txt" --output "$RUNNER_TEMP/zap-body.json" \
+              --write-out '%{http_code}')
+          if [ "$status" != "201" ]; then
+            echo "::error::Signup returned HTTP $status"
+            cat "$RUNNER_TEMP/zap-body.json"
+            exit 1
+          fi
+          cookie=$(tr -d '\r' < "$RUNNER_TEMP/zap-headers.txt" |
+            sed -nE 's/^[Ss]et-[Cc]ookie: (session_id=[^;]+).*/\1/p' | head -n 1)
+          if [ -z "$cookie" ]; then
+            echo "::error::Signup response had no session_id cookie"
+            exit 1
+          fi
+          echo "::add-mask::$cookie"
+          echo "::add-mask::${cookie#session_id=}"
+          {
+            echo "ZAP_AUTH_HEADER=Cookie"
+            echo "ZAP_AUTH_HEADER_VALUE=$cookie"
+          } >> "$GITHUB_ENV"
+
+      # DELETE /session destroys the test user's session row, which would log ZAP out mid-scan, so keep it
+      # out of the scan. Several -config options share one -z argument.
+      - name: Configure ZAP options
+        id: zap_options
+        run: |
+          spider_options=""
+          zap_config='-config globalexcludeurl.url_list.url(0).regex=.*/session$ -config globalexcludeurl.url_list.url(0).enabled=true'
+          if [ -n "$ZAP_MAX_MINUTES" ]; then
+            if ! [[ "$ZAP_MAX_MINUTES" =~ ^[1-9][0-9]*$ ]]; then
+              echo "::error::ZAP_MAX_MINUTES must be a positive integer, got '$ZAP_MAX_MINUTES'"
+              exit 1
+            fi
+            # -m limits the spider; the scanner option limits the active scan
+            spider_options="-m $ZAP_MAX_MINUTES"
+            zap_config="$zap_config -config scanner.maxScanDurationInMins=$ZAP_MAX_MINUTES"
+          fi
+          echo "cmd_options=$spider_options -z \"$zap_config\"" >> "$GITHUB_OUTPUT"
+
+      # Runs ZAP in Docker on the runner with --network=host, so the target is the published port.
+      # The action uploads report_md.md, report_json.json and report_html.html as the zap-report artifact.
+      - name: Run ZAP Full Scan (active and intrusive)
+        uses: zaproxy/action-full-scan@v0.13.0
+        with:
+          target: http://localhost:3000
+          allow_issue_writing: false
+          fail_action: false
+          artifact_name: zap-report
+          cmd_options: ${{ steps.zap_options.outputs.cmd_options }}
+
+      # A step summary is limited to 1 MiB, anything larger is dropped, so truncate with headroom.
+      - name: Add ZAP report to job summary
+        if: ${{ !cancelled() && hashFiles('report_md.md') != '' }}
+        run: |
+          limit=900000
+          size=$(wc -c < report_md.md)
+          {
+            if [ "$size" -le "$limit" ]; then
+              cat report_md.md
+            else
+              # sed drops the last line, which head may have cut mid-line or mid-character
+              head -c "$limit" report_md.md | sed '$d'
+              printf '\n\n> ⚠️ Report truncated for the job summary (%s bytes, limit %s). The full report is in the **zap-report** artifact.\n' "$size" "$limit"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
