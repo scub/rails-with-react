@@ -1,0 +1,286 @@
+---
+openapi: 3.0.3
+info:
+  title: Rails with React API
+  version: 1.0.0
+servers:
+- url: http://localhost:3000
+paths:
+  "/api/v1/boards/{board_id}/notes":
+    get:
+      summary: List notes on a board
+      tags:
+      - Notes
+      parameters:
+      - name: board_id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: lists the notes belonging to the board
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    content:
+                      type: string
+                    created_at:
+                      type: integer
+                  required:
+                  - id
+                  - content
+                  - created_at
+    post:
+      summary: Create a note
+      tags:
+      - Notes
+      security:
+      - SessionCookie: []
+      parameters:
+      - name: board_id
+        in: path
+        required: true
+        schema:
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note:
+                  type: object
+                  properties:
+                    content:
+                      type: string
+                  required:
+                  - content
+              required:
+              - note
+      responses:
+        '201':
+          description: returns the serialized note
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  content:
+                    type: string
+                  created_at:
+                    type: integer
+                required:
+                - id
+                - content
+                - created_at
+        '401':
+          description: returns unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                required:
+                - error
+        '422':
+          description: returns validation errors
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: string
+                required:
+                - errors
+  "/passwords":
+    post:
+      summary: Request a password reset
+      tags:
+      - Passwords
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                email_address:
+                  type: string
+              required:
+              - email_address
+      responses:
+        '200':
+          description: returns ok without leaking user existence
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notice:
+                    type: string
+                required:
+                - notice
+  "/passwords/{token}":
+    patch:
+      summary: Reset a password
+      tags:
+      - Passwords
+      parameters:
+      - name: token
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+                password_confirmation:
+                  type: string
+              required:
+              - password
+              - password_confirmation
+      responses:
+        '200':
+          description: destroys sessions on reset
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  notice:
+                    type: string
+                required:
+                - notice
+        '401':
+          description: rejects an invalid token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                required:
+                - error
+  "/registrations":
+    post:
+      summary: Sign up
+      tags:
+      - Registrations
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                email_address:
+                  type: string
+                password:
+                  type: string
+                password_confirmation:
+                  type: string
+              required:
+              - email_address
+              - password
+              - password_confirmation
+      responses:
+        '201':
+          description: creates a user and returns success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      email_address:
+                        type: string
+                    required:
+                    - id
+                    - email_address
+                required:
+                - user
+  "/session":
+    delete:
+      summary: Log out
+      tags:
+      - Sessions
+      responses:
+        '204':
+          description: deletes the session
+    post:
+      summary: Log in
+      tags:
+      - Sessions
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                email_address:
+                  type: string
+                password:
+                  type: string
+              required:
+              - email_address
+              - password
+      responses:
+        '201':
+          description: starts session on login
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      email_address:
+                        type: string
+                    required:
+                    - id
+                    - email_address
+                required:
+                - user
+        '401':
+          description: rejects bad creds
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                required:
+                - error
+components:
+  securitySchemes:
+    SessionCookie:
+      description: Signed session cookie set by POST /session or POST /registrations
+      type: apiKey
+      in: cookie
+      name: session_id
