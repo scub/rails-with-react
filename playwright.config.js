@@ -11,7 +11,10 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  reporter: process.env.CI ? [['./reporters/playwright/markdown-reporter'], ['github']]: [['list']],
+  reporter: [
+    ...(process.env.CI ? [['./reporters/playwright/markdown-reporter'], ['github']] : [['list']]),
+    ['allure-playwright', { resultsDir: 'allure-results' }],
+  ],
   use: {
     baseURL,
     trace: 'on-first-retry',
