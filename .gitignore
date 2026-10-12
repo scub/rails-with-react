@@ -56,7 +56,13 @@ node_modules
 /playwright/.cache/
 /e2e/.auth/
 /playwright-report.md
+/allure-results/
+/allure-report/
 
 # Docker scan artifacts
 /rails-with-react.sbom
 /rails-with-react-cves.md
+
+# Assorted
+.cache/**
+
