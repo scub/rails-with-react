@@ -1,22 +1,13 @@
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
-  workflow_dispatch:
-    inputs:
-      zap_max_minutes:
-        description: 'ZAP time limit in minutes, applied to each scan phase (spider and active scan) of both scans (empty = no limit)'
-        required: false
-        default: ''
 
 permissions:
   contents: read
 
-# Keyed by ref so a pull request run can never cancel a publish that is in flight on main
 concurrency:
   group: rails-with-react-testing-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: false
 
 defaults:
   run:
@@ -25,7 +16,7 @@ defaults:
 env:
   IMAGE_NAME: 00rawrus00/rails-with-react
 
-name: Lint, Test, Build, Scan, Publish
+name: Merge - Verify, Build, Attest and Release 
 
 jobs:
   rails_lint:
@@ -203,9 +194,8 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      digest: ${{ steps.build-image.outputs.digest }}
       tag: ${{ steps.tags.outputs.primary }}
-      image: ${{ env.IMAGE_NAME }}:${{ steps.tags.outputs.primary }}
+      digest: ${{ steps.build-image.outputs.digest }}
 
     steps:
       - name: Checkout repo
@@ -220,37 +210,21 @@ jobs:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PAT }}
 
-      # main publishes latest and <build number>-<short sha>. Pull requests publish pr-<build number>-<short sha>.
-      # Anything else (a manual run from another branch) gets manual-<build number>-<short sha>, never latest.
       - name: Compute image tags
         id: tags
         env:
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          short="${HEAD_SHA::7}"
-          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            primary="pr-${GITHUB_RUN_NUMBER}-${short}"
-            tags="${IMAGE_NAME}:${primary}"
-          elif [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF" = "refs/heads/main" ]; then
-            primary="${GITHUB_RUN_NUMBER}-${short}"
-            tags="${IMAGE_NAME}:latest"$'\n'"${IMAGE_NAME}:${primary}"
-          else
-            primary="manual-${GITHUB_RUN_NUMBER}-${short}"
-            tags="${IMAGE_NAME}:${primary}"
-          fi
+          primary="${GITHUB_RUN_NUMBER}-${HEAD_SHA::7}"
           echo "primary=$primary" >> "$GITHUB_OUTPUT"
-          {
-            echo "tags<<EOF"
-            echo "$tags"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
+          echo "tags=${{vars.IMAGE_NAME}}:${primary}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push image
         id: build-image
         uses: docker/build-push-action@v7
         with:
           push: true
-          tags: ${{ steps.tags.outputs.tags }}
+          tags: ${{vars.IMAGE_NAME}}:latest,${{vars.IMAGE_NAME}}:${{ steps.tags.outputs.build_tag }}
           attests: type=sbom,generator=docker/buildkit-syft-scanner:stable-1
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -259,15 +233,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: [docker_build]
 
-    # Job-level permissions replace the workflow-level ones. pull-requests is for the Scout PR comment,
-    # security-events for code scanning, the rest for the attestation.
     permissions:
       contents: read
       id-token: write
       attestations: write
       artifact-metadata: write
       security-events: write
-      pull-requests: write
 
     steps:
       - name: Checkout repo
@@ -287,14 +258,14 @@ jobs:
         with:
           command: sbom
           format: cyclonedx
-          image: ${{ env.IMAGE_NAME }}@${{ needs.docker_build.outputs.digest }}
+          image: ${{ vars.IMAGE_NAME }}@${{ needs.docker_build.outputs.digest }}
           output: rails-with-react-sbom.json
 
       - name: Generate CVE report
         uses: docker/scout-action@v1
         with:
           command: cves
-          image: ${{ env.IMAGE_NAME }}@${{ needs.docker_build.outputs.digest }}
+          image: ${{ vars.IMAGE_NAME }}@${{ needs.docker_build.outputs.digest }}
           only-severities: critical,high
           output: rails-with-react-cves.json
           sarif-file: rails-with-react-cves.sarif
@@ -303,7 +274,7 @@ jobs:
 
       # Code scanning and attestations are only for what is published from main
       - name: Upload CVE results to code scanning
-        if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' && hashFiles('rails-with-react-cves.sarif') != '' }}
+        if: ${{ hashFiles('rails-with-react-cves.sarif') != '' }}
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: rails-with-react-cves.sarif
@@ -314,10 +285,9 @@ jobs:
 
       # Max attestation size 16Mb
       - name: Publish attestation
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         uses: actions/attest@v4
         with:
-          subject-name: ${{ env.IMAGE_NAME }}
+          subject-name: ${{ vars.IMAGE_NAME }}
           subject-digest: ${{ needs.docker_build.outputs.digest }}
           sbom-path: rails-with-react-sbom.json
           show-summary: true
@@ -356,7 +326,7 @@ jobs:
           --health-retries 5
 
       web:
-        image: ${{ needs.docker_build.outputs.image }}
+        image: ${{ vars.IMAGE_NAME }}@${{ needs.docker_build.outputs.digest }}
         env:
           DB_URL: postgres://rails_react_monolith:password@postgres:5432/rails_react_monolith_test
           REDIS_URL: redis://redis:6379/0
@@ -405,7 +375,6 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      # Empty means no limit. Set via the workflow_dispatch input, or a repository variable for push runs.
       ZAP_MAX_MINUTES: ${{ inputs.zap_max_minutes || vars.ZAP_MAX_MINUTES }}
 
     services:
@@ -430,7 +399,7 @@ jobs:
           --health-retries 5
 
       web:
-        image: ${{ needs.docker_build.outputs.image }}
+        image: ${{vars.IMAGE_NAME}}:${{needs.docker_build.outputs.tag}}
         env:
           DB_URL: postgres://rails_react_monolith:password@postgres:5432/rails_react_monolith_test
           REDIS_URL: redis://redis:6379/0
@@ -439,11 +408,9 @@ jobs:
           - 3000:3000
 
     steps:
-      # The API scan reads doc/openapi.yaml from the workspace
       - name: Checkout repo
         uses: actions/checkout@v7
 
-      # Signs up a throwaway user and hands its session cookie to ZAP
       - name: Create ZAP test user
         run: bash .github/scripts/zap/create-test-user.sh
 
@@ -451,8 +418,6 @@ jobs:
         id: zap_options
         run: bash .github/scripts/zap/configure-options.sh
 
-      # Runs ZAP in Docker on the runner with --network=host, so the target is the published port.
-      # The action uploads report_md.md, report_json.json and report_html.html as the zap-report artifact.
       - name: Run ZAP Full Scan (active and intrusive)
         uses: zaproxy/action-full-scan@v0.13.0
         with:
@@ -466,12 +431,10 @@ jobs:
         if: ${{ !cancelled() && hashFiles('report_md.md') != '' }}
         run: bash .github/scripts/zap/report-summary.sh "ZAP Full Scan" zap-report
 
-      # Both actions write report_*.* to the workspace root, so clear the first scan's files
       - name: Clear full scan reports
         if: ${{ !cancelled() }}
         run: rm -f report_md.md report_json.json report_html.html
 
-      # Covers the routes the crawl can't find, using the spec generated by rspec-openapi
       - name: Run ZAP API Scan
         if: ${{ !cancelled() }}
         uses: zaproxy/action-api-scan@v0.10.0

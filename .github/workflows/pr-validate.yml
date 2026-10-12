@@ -22,10 +22,7 @@ defaults:
   run:
     shell: bash
 
-env:
-  IMAGE_NAME: 00rawrus00/rails-with-react
-
-name: test workflow
+name: Pull request - validation 
 
 jobs:
   rails_lint:
@@ -154,9 +151,8 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      digest: ${{ steps.build-image.outputs.digest }}
       tag: ${{ steps.tags.outputs.primary }}
-      image: ${{ env.IMAGE_NAME }}:${{ steps.tags.outputs.primary }}
+      digest: ${{ steps.build-image.outputs.digest }}
 
     steps:
       - name: Checkout repo
@@ -171,16 +167,14 @@ jobs:
           username: ${{ secrets.DOCKER_USER }}
           password: ${{ secrets.DOCKER_PAT }}
 
-      # A throwaway tag so the e2e and ZAP service containers can pull the image under test.
-      # This workflow never moves latest.
       - name: Compute image tags
         id: tags
         env:
-          HEAD_SHA: ${{ github.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           primary="e2e-${GITHUB_RUN_NUMBER}-${HEAD_SHA::7}"
           echo "primary=$primary" >> "$GITHUB_OUTPUT"
-          echo "tags=${IMAGE_NAME}:${primary}" >> "$GITHUB_OUTPUT"
+          echo "tags=${{vars.IMAGE_NAME}}:${primary}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push image
         id: build-image
@@ -188,15 +182,20 @@ jobs:
         with:
           push: true
           tags: ${{ steps.tags.outputs.tags }}
-          # No attestations from this workflow
           provenance: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Shows what testing.yml would publish and attest for this image. Nothing is published from here.
+      - name: Print metadata
+        run: echo "${{ steps.build-image.outputs.metadata }}"
+
   docker_scan:
     runs-on: ubuntu-latest
     needs: [docker_build]
+
+    permissions:
+      contents: read
+      pull-requests: write
 
     steps:
       - name: Checkout repo
@@ -216,14 +215,14 @@ jobs:
         with:
           command: sbom
           format: cyclonedx
-          image: ${{ env.IMAGE_NAME }}@${{ needs.docker_build.outputs.digest }}
+          image: ${{ vars.IMAGE_NAME }}@${{ needs.docker_build.outputs.digest }}
           output: rails-with-react-sbom.json
 
       - name: Generate CVE report
         uses: docker/scout-action@v1
         with:
           command: cves
-          image: ${{ env.IMAGE_NAME }}@${{ needs.docker_build.outputs.digest }}
+          image: ${{ vars.IMAGE_NAME }}@${{ needs.docker_build.outputs.digest }}
           only-severities: critical,high
           output: rails-with-react-cves.json
           only-fixed: true
@@ -274,7 +273,7 @@ jobs:
           --health-retries 5
 
       web:
-        image: ${{ needs.docker_build.outputs.image }}
+        image: ${{vars.IMAGE_NAME}}:${{needs.docker_build.outputs.tag}}
         env:
           DB_URL: postgres://rails_react_monolith:password@postgres:5432/rails_react_monolith_test
           REDIS_URL: redis://redis:6379/0
@@ -323,7 +322,6 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      # Empty means no limit. Set via the workflow_dispatch input, or a repository variable for push runs.
       ZAP_MAX_MINUTES: ${{ inputs.zap_max_minutes || vars.ZAP_MAX_MINUTES }}
 
     services:
@@ -348,7 +346,7 @@ jobs:
           --health-retries 5
 
       web:
-        image: ${{ needs.docker_build.outputs.image }}
+        image: ${{vars.IMAGE_NAME}}:${{needs.docker_build.outputs.tag}}
         env:
           DB_URL: postgres://rails_react_monolith:password@postgres:5432/rails_react_monolith_test
           REDIS_URL: redis://redis:6379/0
@@ -370,7 +368,6 @@ jobs:
         run: bash .github/scripts/zap/configure-options.sh
 
       # Runs ZAP in Docker on the runner with --network=host, so the target is the published port.
-      # The action uploads report_md.md, report_json.json and report_html.html as the zap-report artifact.
       - name: Run ZAP Full Scan (active and intrusive)
         uses: zaproxy/action-full-scan@v0.13.0
         with:
