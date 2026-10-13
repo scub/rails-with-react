@@ -226,7 +226,7 @@ jobs:
           only-severities: critical,high
           output: rails-with-react-cves.json
           only-fixed: true
-          write-comment: false
+          write-comment: true
 
       - name: Check sbom size
         run: du -sh rails-with-react-sbom.json
